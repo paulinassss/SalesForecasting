@@ -13,27 +13,26 @@ from sklearn.model_selection import GridSearchCV
 import warnings
 warnings.filterwarnings('ignore')
 
-def preprocess_data(file_path):
-    # Load Data
-    sales = pd.read_csv(file_path, encoding='latin1')
+# def check_integrity(data)
 
+def preprocess_data(sales):
     # Clean Data
-    sales.drop(['Row ID', 'Postal Code', 'Region'], axis=1, inplace=True)
+    sales.drop(['Postal_Code'], axis=1, inplace=True)
 
     # Modify Data
-    sales['Order Date'] = pd.to_datetime(sales['Order Date'])
-    sales['Ship Date'] = pd.to_datetime(sales['Ship Date'])
+    sales['Order_Date'] = pd.to_datetime(sales['Order_Date'], format='%d/%m/%Y')
+    sales['Ship_Date'] = pd.to_datetime(sales['Ship_Date'], format='%d/%m/%Y')
 
     # Feature Engineering
-    sales['Order Month'] = sales['Order Date'].dt.month
-    sales['Order Year'] = sales['Order Date'].dt.year
-    sales['Order Day'] = sales['Order Date'].dt.day
-    sales['Order Weekday'] = sales['Order Date'].dt.weekday
-    sales['Quarter'] = sales['Order Date'].dt.quarter
-    sales['Shipping Time'] = (sales['Ship Date'] - sales['Order Date']).dt.days
+    sales['Order_Month'] = sales['Order_Date'].dt.month
+    sales['Order_Year'] = sales['Order_Date'].dt.year
+    sales['Order_Day'] = sales['Order_Date'].dt.day
+    sales['Order_Weekday'] = sales['Order_Date'].dt.weekday
+    sales['Quarter'] = sales['Order_Date'].dt.quarter
+    sales['Shipping_Time'] = (sales['Ship_Date'] - sales['Order_Date']).dt.days
 
     # Encode categorical features
-    categorical_cols = ['Ship Mode', 'Segment', 'Category', 'City', 'State', 'Product Name']
+    categorical_cols = ['Ship_Mode', 'Segment', 'Category', 'City', 'State', 'Product_Name']
     label_encoders = {}
     for col in categorical_cols:
         label_encoders[col] = LabelEncoder()
@@ -42,10 +41,10 @@ def preprocess_data(file_path):
     return sales
 
 def generate_monthly_sales(sales):
-    sales['Month Year'] = sales['Order Date'].dt.to_period('M')
+    sales['Month_Year'] = sales['Order_Date'].dt.to_period('M')
 
     # Aggregate data
-    monthly_sales = sales.groupby('Month Year').agg({'Sales': 'sum'}).reset_index()
+    monthly_sales = sales.groupby('Month_Year').agg({'Sales': 'sum'}).reset_index()
 
     # Add lag features
     monthly_sales['sales_lag_1'] = monthly_sales['Sales'].shift(1)
@@ -72,7 +71,7 @@ def train_model(monthly_sales):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
     # Initialize the model
-    rf_model = RandomForestRegressor(random_state=42, n_estimators=165, max_depth=10, min_samples_split=3)
+    rf_model = RandomForestRegressor(random_state=42, n_estimators=205, max_depth=3, min_samples_split=2)
 
     # Train the model
     rf_model.fit(X_train, y_train)
@@ -107,11 +106,11 @@ def forecast_sales(rf_model, monthly_sales, X_test, forecast_period): #forecast_
     for i in range(forecast_period):
         # predict the next month's sales
         predicted_sales = rf_model.predict(latest_data.values.reshape(1, -1))
-        next_month = monthly_sales_copy['Month Year'].max() + 1
-        forecast.append({'Month Year': next_month, 'Sales': predicted_sales})
+        next_month = monthly_sales_copy['Month_Year'].max() + 1
+        forecast.append({'Month_Year': next_month, 'Sales': predicted_sales})
 
         # append the forecasted data to the initial dataset
-        new_row = pd.DataFrame({'Month Year': [next_month], 'Sales': [predicted_sales]})
+        new_row = pd.DataFrame({'Month_Year': [next_month], 'Sales': [predicted_sales]})
         monthly_sales_copy = pd.concat([monthly_sales_copy, new_row], ignore_index=True)
 
         # update tha lag features for the next month
@@ -129,7 +128,7 @@ def forecast_sales(rf_model, monthly_sales, X_test, forecast_period): #forecast_
     return forecast_df
 
 '''
-test_sales = preprocess_data("stores_sales_forecasting.csv")
+test_sales = preprocess_data("superstore_final_dataset.csv")
 test_monthly_sales = generate_monthly_sales(test_sales)
 test_model, error1, error2, X_test = train_model(test_monthly_sales)
 test_forecast = forecast_sales(test_model, test_monthly_sales, X_test, 3)
