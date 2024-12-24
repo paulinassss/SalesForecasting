@@ -184,7 +184,7 @@ def total_sales(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
     # Calculate the total sales within the date range
     total_sales = filtered_sales['Sales'].sum()
-
+    total_sales = "${:,.2f}".format(total_sales)
     return total_sales
 '''
 test_set = pd.read_csv('superstore_final_dataset.csv')

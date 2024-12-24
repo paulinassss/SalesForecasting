@@ -136,7 +136,9 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
             forecast = forecast_sales(rf_model, monthly_sales, x_test, forecast_period)
 
             sales_graph = create_graph(sales)
-            start_d, end_d = generate_default_dates(sales)
+            if not start_date and not end_date:
+                start_date, end_date = generate_default_dates(sales)
+
             total = total_sales(sales, start_date, end_date)
 
             # Create Dash table for 1 tab
@@ -152,7 +154,7 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
                 columns=[{'name': i, 'id': i} for i in forecast.columns],
                 page_size=10
             )
-            return data_table, f"File Uploaded: {filename}", forecast_table, total, sales_graph, start_d, end_d
+            return data_table, f"File Uploaded: {filename}", forecast_table, total, sales_graph, start_date, end_date
 
     return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", {},"",""
 #----------------------------------------------------------------------------------------------------------------------------------
