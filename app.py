@@ -8,10 +8,10 @@ import os
 import datetime
 import io
 import base64
-from utils import preprocess_data, generate_monthly_sales, train_model, forecast_sales
 
-# Load your pre-trained model
-# ??
+from jedi.api.refactoring import inline
+
+from utils import create_graph, total_sales, generate_default_dates, parse_contents, preprocess_data, generate_monthly_sales, train_model, forecast_sales
 
 # Initialize the dash app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -54,62 +54,110 @@ app.layout = html.Div([
         # Tab 2: Dashboard (Placeholder for now)
         dcc.Tab(label='Dashboard', children=[
             html.Div(style={'marginLeft': '10px'}, children=[
-                html.H3("Dashboard will be displayed here")
-                # dashboard content here later
+                html.H3("Insights Dashboard"),
+                html.H4("Sales Forecast"),
+                # Dropdown for selecting forecast period
+                html.Div([
+                    html.Label("Select Forecast Period:"),
+                    dcc.Dropdown(
+                        id='forecast-period',
+                        options=[
+                            {'label': '1 Month', 'value': 1},
+                            {'label': '3 Months', 'value': 3},
+                            {'label': '6 Months', 'value': 6},
+                        ],
+                        value=3,  # Default value
+                        style={'width': '50%', 'marginTop': '10px'}
+                    ),
+                ]),
+                html.Div(id='output-forecast'),
+
+                # Date range selection for graph
+                html.Div([
+                    html.Label("Select Date Range:"),
+                    dcc.DatePickerRange(
+                        id='date-range-picker',
+                        start_date='2017-01-01',  # Default start date
+                        end_date='2023-12-31',    # Default end date
+                        display_format='YYYY-MM-DD',
+                        style={'width': '50%', 'marginTop': '10px'}
+                    ),
+                ]),
+                # Dashboard layout
+                dbc.Row([
+                    # Left column: total sales and growth rate
+                    dbc.Col([
+                        html.H4("Total Sales", style={'marginTop': '20px'}),
+                        html.Div(id='total-sales', style={'fontSize': '20px', 'marginBottom': '20px'}),
+
+                        html.H4("Growth Rate", style={'marginTop': '20px'}),
+                        html.Div(id='growth-rate', style={'fontSize': '20px', 'marginBottom': '20px'}),
+                    ], width=4),
+
+                    # Right column - a graph
+                    dbc.Col([
+                        dcc.Graph(id='sales-graph')
+                    ], width=8)
+                ]),
             ])
         ]),
     ]),
 ])
 #----------------------------------------------------------------------------------------------------------------------------------
 
-#------------------------------------------------------- FUNCTIONS -----------------------------------------------------------------
-def parse_contents(contents, filename):
-    content_type, content_string = contents.split(',')
-
-    decoded = base64.b64decode(content_string)
-    try:
-        if 'csv' in filename:
-            # Assume that the user uploaded a CSV file
-            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-        elif 'xls' in filename:
-            # Assume that the user uploaded an excel file
-            df = pd.read_excel(io.BytesIO(decoded))
-    except Exception as e:
-        print(e)
-        return html.Div([
-            'There was an error processing this file.'
-        ])
-
-    return html.Div([
-        dash_table.DataTable(
-            df.to_dict('records'),
-            [{'name': i, 'id': i} for i in df.columns],
-            page_size=10
-        ),
-
-        html.Hr(),  # horizontal line
-
-        # For debugging, display the raw contents provided by the web browser
-        html.Div('Raw Content'),
-        html.Pre(contents[0:200] + '...', style={
-            'whiteSpace': 'pre-wrap',
-            'wordBreak': 'break-all'
-        })
-    ])
-#----------------------------------------------------------------------------------------------------------------------------------
-
 #------------------------------------------------------- CALLBACKS -----------------------------------------------------------------
 @callback(
     [Output('output-data-upload', 'children'),
-     Output('output-filename', 'children')],
-     Input('upload-data', 'contents'),
+     Output('output-filename', 'children'),
+     Output('output-forecast', 'children'),
+     Output('total-sales', 'children'),
+     #Output('growth-rate', 'children'),
+     Output('sales-graph', 'figure'),
+     Output('date-range-picker', 'start_date'),
+     Output('date-range-picker', 'end_date')],
+     [Input('upload-data', 'contents'),
+      Input('forecast-period', 'value'),
+      Input('date-range-picker', 'start_date'),
+      Input('date-range-picker', 'end_date')],
      State('upload-data', 'filename')
 )
-def update_output(contents, filename):
+def update_output(contents, forecast_period, start_date, end_date, filename):
     if contents is not None:
-        return parse_contents(contents, filename), f"File Uploaded: {filename}"
-    return html.Div("No file uploaded yet."), ""
+        df = parse_contents(contents, filename)
+        if isinstance(df, pd.DataFrame):
+            # Preprocess data
+            sales = preprocess_data(df)
+            # Generate monthly_sales dataset
+            monthly_sales = generate_monthly_sales(sales)
+            # Train the model
+            rf_model, mae, rmse, x_test = train_model(monthly_sales)
+
+            # Generate the forecast
+            forecast = forecast_sales(rf_model, monthly_sales, x_test, forecast_period)
+
+            sales_graph = create_graph(sales)
+            start_d, end_d = generate_default_dates(sales)
+            total = total_sales(sales, start_date, end_date)
+
+            # Create Dash table for 1 tab
+            data_table = dash_table.DataTable(
+                df.to_dict('records'),
+                [{'name': i, 'id': i} for i in df.columns],
+                page_size=10
+            )
+
+            # Create table with a forecast
+            forecast_table = dash_table.DataTable(
+                data=forecast.to_dict('records'),
+                columns=[{'name': i, 'id': i} for i in forecast.columns],
+                page_size=10
+            )
+            return data_table, f"File Uploaded: {filename}", forecast_table, total, sales_graph, start_d, end_d
+
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", {},"",""
 #----------------------------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
     app.run_server(debug=True)
+
+
