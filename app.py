@@ -11,7 +11,7 @@ import base64
 
 from jedi.api.refactoring import inline
 
-from utils import create_graph, total_sales, generate_default_dates, parse_contents, preprocess_data, generate_monthly_sales, train_model, forecast_sales
+from utils import *
 
 # Initialize the dash app
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -71,7 +71,7 @@ app.layout = html.Div([
                     ),
                 ]),
                 html.Div(id='output-forecast'),
-
+                html.H4("General Sales Insights"),
                 # Date range selection for graph
                 html.Div([
                     html.Label("Select Date Range:"),
@@ -87,18 +87,33 @@ app.layout = html.Div([
                 dbc.Row([
                     # Left column: total sales and growth rate
                     dbc.Col([
-                        html.H4("Total Sales", style={'marginTop': '20px'}),
-                        html.Div(id='total-sales', style={'fontSize': '20px', 'marginBottom': '20px'}),
+                        html.H4("Total Revenue", style={'marginTop': '20px'}),
+                        html.Div(id='total-revenue', style={'fontSize': '20px', 'marginBottom': '20px'}),
 
-                        html.H4("Growth Rate", style={'marginTop': '20px'}),
+                        html.H4("Average Growth Rate", style={'marginTop': '20px'}),
                         html.Div(id='growth-rate', style={'fontSize': '20px', 'marginBottom': '20px'}),
-                    ], width=4),
+                        html.Div(id='x-over-x', style={'fontSize': '20px', 'marginBottom': '20px'})
+                    ], width=2),
 
                     # Right column - a graph
                     dbc.Col([
-                        dcc.Graph(id='sales-graph')
-                    ], width=8)
+                        dcc.Graph(id='sales-graph'),
+                        # Create a row for Most Selling Weekdays and Most Orders Weekdays
+                        dbc.Row([
+                            dbc.Col([
+                                # Graph for Most Selling Weekdays
+                                dcc.Graph(id='av-sales-weekday')
+                            ], width=6),  # Half-width column for first graph
+
+                            dbc.Col([
+                                # Graph for Most Orders Weekdays
+                                dcc.Graph(id='av-orders-weekday')
+                            ], width=6),  # Half-width column for second graph
+                        ])
+                    ], width=10)
                 ]),
+                html.H4("Customer Insights"),
+
             ])
         ]),
     ]),
@@ -110,9 +125,12 @@ app.layout = html.Div([
     [Output('output-data-upload', 'children'),
      Output('output-filename', 'children'),
      Output('output-forecast', 'children'),
-     Output('total-sales', 'children'),
-     #Output('growth-rate', 'children'),
+     Output('total-revenue', 'children'),
+     Output('growth-rate', 'children'),
+     Output('x-over-x', 'children'),
      Output('sales-graph', 'figure'),
+     Output('av-sales-weekday', 'figure'),
+     Output('av-orders-weekday', 'figure'),
      Output('date-range-picker', 'start_date'),
      Output('date-range-picker', 'end_date')],
      [Input('upload-data', 'contents'),
@@ -135,11 +153,17 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
             # Generate the forecast
             forecast = forecast_sales(rf_model, monthly_sales, x_test, forecast_period)
 
-            sales_graph = create_graph(sales)
             if not start_date and not end_date:
                 start_date, end_date = generate_default_dates(sales)
 
-            total = total_sales(sales, start_date, end_date)
+            # Create a graph based on the date picker
+            sales_graph = create_graph(sales, start_date, end_date)
+
+            # Calculate total sales based on the date picker
+            total_r = total_revenue(sales, start_date, end_date)
+
+            av_growth, av_growth_message = average_growth(sales, start_date, end_date)
+            sales_weekday_fig, orders_weekday_fig = create_weekday_sales_graph(sales, start_date, end_date), create_weekday_orders_graph(sales, start_date, end_date)
 
             # Create Dash table for 1 tab
             data_table = dash_table.DataTable(
@@ -154,9 +178,9 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
                 columns=[{'name': i, 'id': i} for i in forecast.columns],
                 page_size=10
             )
-            return data_table, f"File Uploaded: {filename}", forecast_table, total, sales_graph, start_date, end_date
+            return data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig, start_date, end_date
 
-    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", {},"",""
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", ""
 #----------------------------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":

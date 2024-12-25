@@ -1,7 +1,11 @@
+from pyexpat.errors import messages
+
 import pandas as pd
 import numpy as np
 from pandas.conftest import axis_1
 from pandas.tseries.offsets import MonthBegin
+from datetime import datetime, timedelta
+
 
 # Machine learning
 from sklearn.model_selection import train_test_split
@@ -160,17 +164,64 @@ def forecast_sales(rf_model, monthly_sales, X_test, forecast_period): #forecast_
     # Return the forecast for the next 3 month
     return forecast_df
 
-def create_graph(data):
-    monthly_sales = generate_monthly_sales(data)
-    monthly_sales['Month_Year'] = pd.to_datetime(monthly_sales['Month_Year'])
+def create_graph(data, start_date, end_date):
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+    formatted_start_date = start_date_obj.strftime("%Y-%m")
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+    formatted_end_date = end_date_obj.strftime("%Y-%m")
+    # Aggregate sales by 'month_year'
+    data['Month_Year'] = data['Order_Date'].dt.strftime('%Y-%m')
+    monthly_sales = data.groupby('Month_Year')['Sales'].sum().reset_index()
+    monthly_sales['Month_Year'] = monthly_sales['Month_Year'].astype(str)
+    #monthly_sales['Month_Year'] = pd.to_datetime(monthly_sales['Month_Year'])
+    filtered_sales = monthly_sales[(monthly_sales['Month_Year'] >= formatted_start_date) & (monthly_sales['Month_Year'] <= formatted_end_date)]
     sales_trend_fig = px.line(
-        monthly_sales,
+        filtered_sales,
         x='Month_Year',
         y='Sales',
         title="Sales Trend",
         labels={'x': 'Month', 'y': 'Sales'}
     )
     return sales_trend_fig
+
+def create_weekday_sales_graph(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    daily_sales = filtered_sales.groupby('Order_Date')['Sales'].sum().reset_index()
+
+    daily_sales = daily_sales.merge(filtered_sales[['Order_Date', 'Order_Weekday']].drop_duplicates(), on='Order_Date',
+                                    how='left')
+
+    weekday_sales = daily_sales.groupby('Order_Weekday')['Sales'].sum().reset_index()
+    weekday_count = daily_sales['Order_Weekday'].value_counts().sort_index()
+    weekday_sales['Avg_Sales'] = weekday_sales['Sales'] / weekday_count
+    weekday_sales['Weekday_Name'] = weekday_sales['Order_Weekday'].map({
+        0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'
+    })
+
+    fig_sales = px.bar(weekday_sales, x='Weekday_Name', y='Avg_Sales',
+                       title="Average Sales per Weekday",
+                       labels={'Weekday_Name': 'Weekday', 'Avg_Sales': 'Average Sales'},
+                       color='Weekday_Name')
+    return fig_sales
+
+def create_weekday_orders_graph(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    daily_orders = filtered_sales.groupby('Order_Date')['Order_ID'].count().reset_index()
+    daily_orders = daily_orders.merge(filtered_sales[['Order_Date', 'Order_Weekday']].drop_duplicates(), on='Order_Date',
+                                      how='left')
+    weekday_orders = daily_orders.groupby('Order_Weekday')['Order_ID'].sum().reset_index()
+    weekday_count = daily_orders['Order_Weekday'].value_counts().sort_index()
+    weekday_orders['Avg_Orders'] = weekday_orders['Order_ID'] / weekday_count
+    weekday_orders['Weekday_Name'] = weekday_orders['Order_Weekday'].map({
+        0: 'Monday', 1: 'Tuesday', 2: 'Wednesday', 3: 'Thursday', 4: 'Friday', 5: 'Saturday', 6: 'Sunday'
+    })
+
+    fig_orders = px.bar(weekday_orders, x='Weekday_Name', y='Avg_Orders',
+                        title="Average Orders per Weekday",
+                        labels={'Weekday_Name': 'Weekday', 'Avg_Orders': 'Average Orders'},
+                        color='Weekday_Name')
+    return fig_orders
+
 
 def generate_default_dates(data):
     min_date = data['Order_Date'].min()
@@ -180,12 +231,37 @@ def generate_default_dates(data):
 
     return start_date, end_date
 
-def total_sales(data, start_date, end_date):
+def total_revenue(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
     # Calculate the total sales within the date range
-    total_sales = filtered_sales['Sales'].sum()
-    total_sales = "${:,.2f}".format(total_sales)
-    return total_sales
+    total_r = filtered_sales['Sales'].sum()
+    total_r = "${:,.2f}".format(total_r)
+    return total_r
+
+def average_growth(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d").replace(day=1)
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+    end_date_obj = (end_date_obj.replace(day=1) + timedelta(days=32)).replace(day=1) - timedelta(days=1)
+    date_diff = end_date_obj - start_date_obj
+    if date_diff.days > 365:
+        # Calculate average growth Q over Q
+        quarterly_sales = filtered_sales.groupby(['Order_Year', 'Quarter'])['Sales'].sum().reset_index().sort_values(
+            by=['Order_Year', 'Quarter']).reset_index(drop=True)
+        quarterly_sales['QoQ_Growth'] = (quarterly_sales['Sales'].pct_change() * 100).dropna()
+        average = f"{quarterly_sales['QoQ_Growth'].mean():.2f}%"
+        message = "Quarter over Quarter"
+    else:
+        # Calculate average growth M over M
+        monthly_sales = filtered_sales.groupby(['Order_Year', 'Order_Month'])['Sales'].sum().reset_index().sort_values(
+            by=['Order_Year', 'Order_Month']).reset_index(drop=True)
+        monthly_sales['MoM_Growth'] = (monthly_sales['Sales'].pct_change() * 100).dropna()
+        average = f"{monthly_sales['MoM_Growth'].mean():.2f}%"
+        message = "Month over Month"
+    return average, message
+
+
+
 '''
 test_set = pd.read_csv('superstore_final_dataset.csv')
 test_sales = preprocess_data(test_set)
