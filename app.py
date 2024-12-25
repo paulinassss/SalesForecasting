@@ -113,7 +113,30 @@ app.layout = html.Div([
                     ], width=10)
                 ]),
                 html.H4("Customer Insights"),
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Graph(id='customer-cohorts')
+                    ], width=4, style={'padding': '0px', 'margin': '0px'}),
 
+                    dbc.Col([
+                        html.Div(id='cohort-triangle')
+                    ], width=8, style={'padding': '0px'})
+                ]),
+                dbc.Row([
+                    html.Div([
+                        html.Label("Select Date Range:"),
+                        dcc.DatePickerRange(
+                            id='date-range-picker-customer',
+                            start_date='2017-01-01',  # Default start date
+                            end_date='2023-12-31',    # Default end date
+                            display_format='YYYY-MM-DD',
+                            style={'width': '50%', 'marginTop': '10px'}
+                        ),
+                    ]),
+                    dbc.Col([
+                        dcc.Graph(id='customer-segments')
+                    ], width=6)
+                ])
             ])
         ]),
     ]),
@@ -132,14 +155,21 @@ app.layout = html.Div([
      Output('av-sales-weekday', 'figure'),
      Output('av-orders-weekday', 'figure'),
      Output('date-range-picker', 'start_date'),
-     Output('date-range-picker', 'end_date')],
+     Output('date-range-picker', 'end_date'),
+     Output('customer-cohorts', 'figure'),
+     Output('cohort-triangle', 'children'),
+     Output('customer-segments', 'figure'),
+     Output('date-range-picker-customer', 'start_date'),
+     Output('date-range-picker-customer', 'end_date')],
      [Input('upload-data', 'contents'),
       Input('forecast-period', 'value'),
       Input('date-range-picker', 'start_date'),
-      Input('date-range-picker', 'end_date')],
+      Input('date-range-picker', 'end_date'),
+      Input('date-range-picker-customer', 'start_date'),
+      Input('date-range-picker-customer', 'end_date')],
      State('upload-data', 'filename')
 )
-def update_output(contents, forecast_period, start_date, end_date, filename):
+def update_output(contents, forecast_period, start_date, end_date, start_date_c, end_date_c, filename):
     if contents is not None:
         df = parse_contents(contents, filename)
         if isinstance(df, pd.DataFrame):
@@ -153,6 +183,9 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
             # Generate the forecast
             forecast = forecast_sales(rf_model, monthly_sales, x_test, forecast_period)
 
+            if not start_date_c and not end_date_c:
+                start_date_c, end_date_c = generate_default_dates(sales)
+
             if not start_date and not end_date:
                 start_date, end_date = generate_default_dates(sales)
 
@@ -164,6 +197,8 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
 
             av_growth, av_growth_message = average_growth(sales, start_date, end_date)
             sales_weekday_fig, orders_weekday_fig = create_weekday_sales_graph(sales, start_date, end_date), create_weekday_orders_graph(sales, start_date, end_date)
+            customer_cohorts_fig, cohort_triangle_table = customer_cohorts(sales)
+            customer_segments_graph = customer_segments(sales, start_date_c, end_date_c)
 
             # Create Dash table for 1 tab
             data_table = dash_table.DataTable(
@@ -178,9 +213,11 @@ def update_output(contents, forecast_period, start_date, end_date, filename):
                 columns=[{'name': i, 'id': i} for i in forecast.columns],
                 page_size=10
             )
-            return data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig, start_date, end_date
+            return (data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig,
+                    start_date, end_date, customer_cohorts_fig, cohort_triangle_table, customer_segments_graph,
+                    start_date_c, end_date_c)
 
-    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", ""
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", ""
 #----------------------------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":

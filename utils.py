@@ -18,6 +18,8 @@ import io
 import base64
 from dash import html
 import plotly.express as px
+import plotly.graph_objects as go
+from dash import dash_table
 
 # Warnings
 import warnings
@@ -259,6 +261,100 @@ def average_growth(data, start_date, end_date):
         average = f"{monthly_sales['MoM_Growth'].mean():.2f}%"
         message = "Month over Month"
     return average, message
+
+def customer_cohorts(data):
+    # Candata lists customers and Year_Quarter periods in which they placed at least one order
+    candata = (data[['Customer_ID', 'Order_Date']]
+               .drop_duplicates()
+               .assign(Year_Quarter=data.Order_Date.dt.to_period(freq='Q'))
+               .drop('Order_Date', axis=1)
+               .drop_duplicates()
+               )
+    # Define which period a customer belongs to by the earliest quarter they made a purchase
+    cohorts = candata.groupby('Customer_ID').min().rename(columns={'Year_Quarter': 'Time_Cohort'})
+
+    # Determine the size of each cohort (the number of customer in each cohort)
+    cohorts_size = cohorts.reset_index().groupby('Time_Cohort').size().sort_index().rename('Number_of_Customers')
+    cohorts_size_df = cohorts_size.reset_index()
+    cohorts_size_df.columns = ['Time_Cohort', 'Number_of_Customers']
+
+    cohorts_size_df['Time_Cohort'] = cohorts_size_df['Time_Cohort'].astype(str)
+
+    cohorts_size_df['Year'] = cohorts_size_df['Time_Cohort'].str[:4]
+    yearly_totals = cohorts_size_df.groupby('Year')['Number_of_Customers'].sum().reset_index()
+    yearly_totals['Cumulative_Pos'] = yearly_totals['Number_of_Customers'].cumsum()
+
+    fig = px.bar(
+        cohorts_size_df,
+        x='Time_Cohort',
+        y='Number_of_Customers',
+        title='Customer Cohorts by Quarters',
+        labels={'Time_Cohort': 'Quarter', 'Number_of_Customers': 'Number of Customers'},
+        text='Number_of_Customers',  # Display the number of customers on each bar
+        color='Time_Cohort'  # Optional: Add color to distinguish bars by quarter
+    )
+
+    # Update the layout to improve appearance
+    fig.update_layout(
+        xaxis_title='Quarter',
+        yaxis_title='Number of Customers',
+        showlegend=False  # Hide the legend, as the color is redundant
+    )
+
+    base = candata.merge(cohorts, how='outer', indicator='join_type', validate='m:1', on= 'Customer_ID')
+    base['Year_Quarter'] = base['Year_Quarter'].astype(str)
+    base['Time_Cohort'] = base['Time_Cohort'].astype(str)
+    base.pop('join_type')
+    base.reset_index()
+
+    crosstab = pd.crosstab(
+        index=base['Time_Cohort'],
+        columns=base['Year_Quarter']
+    )
+
+    # Normalize the values by dividing each value by the first value of the row, then multiply by 100 to get percentages
+    crosstab_normalized = crosstab.apply(lambda s: 100 * s / s[s.name], axis=1)
+
+    # Set the float format to display percentages with two decimal points
+    pd.set_option('display.float_format', lambda x: '%.2f' % x)
+
+    crosstab_normalized = crosstab_normalized.applymap(lambda x: f"{x:.2f}%" if x != 0 else "")
+    crosstab_normalized = crosstab_normalized.reset_index()
+
+    crosstab_conv = crosstab_normalized.to_dict('records')  # Rows of the table
+    columns = [{'name': col, 'id': col} for col in crosstab.columns] # Column headers
+    table = dash_table.DataTable(
+        data=crosstab_conv,
+        columns=columns,
+        style_table={'overflowX': 'auto', 'width': '80%', 'margin': 'auto'},
+        style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
+        style_cell={'textAlign': 'center', 'padding': '2px', 'fontSize': '10px', 'maxWidth': '70px', 'lineHeight': '10px'},
+    )
+
+    return fig, table
+
+def customer_segments(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    segment_sizes = filtered_sales.groupby('Segment')['Customer_ID'].nunique().reset_index()
+    segment_sizes.columns = ['Segment', 'Customer_Count']
+
+    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
+    segment_sizes['Segment'] = segment_sizes['Segment'].map(segment_mapping)
+
+    fig = px.pie(
+        segment_sizes,
+        names='Segment',
+        values='Customer_Count',
+        color='Customer_Count',  # Color the bubbles based on the customer count
+        hover_name='Segment',  # Show segment name when hovering over a bubble
+        title="Customer Distribution by Segment",
+        labels={'Customer_Count': 'Number of Customers'},
+    )
+    return fig
+
+
+
+
 
 
 
