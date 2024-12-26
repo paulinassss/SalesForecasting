@@ -326,7 +326,7 @@ def customer_cohorts(data):
     table = dash_table.DataTable(
         data=crosstab_conv,
         columns=columns,
-        style_table={'overflowX': 'auto', 'width': '80%', 'margin': 'auto'},
+        style_table={'overflow': 'auto', 'width': '80%', 'margin': 'auto'},
         style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
         style_cell={'textAlign': 'center', 'padding': '2px', 'fontSize': '10px', 'maxWidth': '70px', 'lineHeight': '10px'},
     )
@@ -352,11 +352,92 @@ def customer_segments(data, start_date, end_date):
     )
     return fig
 
+def sales_per_segments(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    total_sales_per_segment = filtered_sales.groupby('Segment')['Sales'].sum().reset_index()
 
+    unique_orders_per_segment = filtered_sales.groupby('Segment')['Order_ID'].nunique().reset_index()
+    unique_orders_per_segment.columns = ['Segment', 'Unique_Order_Count']
+    segment_sales = pd.merge(unique_orders_per_segment, total_sales_per_segment, on='Segment')
+    segment_sales['Mean_Sales_Per_Order'] = segment_sales['Sales'] / segment_sales['Unique_Order_Count']
 
+    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
+    segment_sales['Segment'] = segment_sales['Segment'].map(segment_mapping)
 
+    fig_total = px.bar(segment_sales,
+                 x='Sales',
+                 y='Segment',
+                 orientation='h',
+                 title="Total Sales by Segment",
+                 labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'}
+                )
+    fig_total.update_layout(
+        height=300,  # Total height of the figure
+        bargap=0.2,  # Space between bars (smaller = thicker bars)
+    )
+    fig_mean = px.bar(segment_sales,
+                       x='Mean_Sales_Per_Order',
+                       y='Segment',
+                       orientation='h',
+                       title="Mean Order Value by Segment",
+                       labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'}
+                       )
+    fig_mean.update_layout(
+        height=300,  # Total height of the figure
+        bargap=0.2,  # Space between bars (smaller = thicker bars)
+    )
 
+    return fig_total, fig_mean
 
+def top_clients(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    clients = filtered_sales.groupby(['Customer_ID', 'Customer_Name', 'Segment']).agg(Sales=('Sales', 'sum'),
+                                                                                Number_of_Orders=(
+                                                                                 'Order_ID', 'nunique')).reset_index()
+    top_10_clients = clients.sort_values(by='Sales', ascending=False).head(10)
+    top_10_clients.reset_index(drop=True, inplace=True)
+    top_10_clients.index += 1
+
+    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
+    top_10_clients['Segment'] = top_10_clients['Segment'].map(segment_mapping)
+
+    table = dash_table.DataTable(
+        data=top_10_clients.to_dict('records'),  # Convert DataFrame to dictionary
+        columns=[{'name': col, 'id': col} for col in top_10_clients.columns],  # Columns for the table
+        style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
+        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '14px'},
+        style_data_conditional=[
+            {
+                'if': {'row_index': 'odd'},
+                'backgroundColor': 'rgb(248, 248, 248)'
+            }
+        ],
+        page_size=10,  # Limit table to 10 rows per page
+    )
+
+    return table
+
+def repeat_customer_rate(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    first_purchase_data = data[['Customer_ID', 'Order_Date']].drop_duplicates()
+    first_purchase_data['First_Purchase_Date'] = first_purchase_data.groupby('Customer_ID')['Order_Date'].transform('min')
+    valid_customers = first_purchase_data[
+        (first_purchase_data['First_Purchase_Date'] >= start_date) &
+        (first_purchase_data['First_Purchase_Date'] <= end_date)
+        ]
+    valid_customer_ids = valid_customers['Customer_ID'].unique()
+    filtered_sales = filtered_sales[filtered_sales['Customer_ID'].isin(valid_customer_ids)]
+    customer_purchase_count = filtered_sales.groupby('Customer_ID').agg(
+        Total_Purchases=('Order_ID', 'nunique')
+    ).reset_index()
+    repeat_customers = customer_purchase_count[customer_purchase_count['Total_Purchases'] > 1]
+    total_customers_in_range = len(valid_customer_ids)
+    repeat_customer_count = len(repeat_customers)
+    rcr = repeat_customer_count / total_customers_in_range if total_customers_in_range > 0 else 0
+
+    rcr_percentage = f"{rcr * 100:.1f}%"
+
+    return rcr_percentage
 
 '''
 test_set = pd.read_csv('superstore_final_dataset.csv')

@@ -133,10 +133,35 @@ app.layout = html.Div([
                             style={'width': '50%', 'marginTop': '10px'}
                         ),
                     ]),
+
+                    # Pie plot
                     dbc.Col([
-                        dcc.Graph(id='customer-segments')
-                    ], width=6)
-                ])
+                        dbc.Row([
+                            dcc.Graph(id='customer-segments')
+                        ]),
+                        dbc.Row([
+                            html.Div("Repeat Customer Rate"),
+                            html.Div(id='repeat-customer-rate')
+                        ])
+                    ], width=6),
+
+                    # Horizontal bar plot
+                    dbc.Col([
+                        dbc.Row([
+                            dcc.Graph(id='total-segment-sales')
+                        ]),
+                        dbc.Row([
+                            dcc.Graph(id='mean-segment-sales')
+                        ])
+                    ])
+                ]),
+
+                dbc.Row([
+                    html.H4(id='top-customers'),
+                ]),
+
+                html.H4("Product insights")
+
             ])
         ]),
     ]),
@@ -160,7 +185,11 @@ app.layout = html.Div([
      Output('cohort-triangle', 'children'),
      Output('customer-segments', 'figure'),
      Output('date-range-picker-customer', 'start_date'),
-     Output('date-range-picker-customer', 'end_date')],
+     Output('date-range-picker-customer', 'end_date'),
+     Output('total-segment-sales', 'figure'),
+     Output('mean-segment-sales', 'figure'),
+     Output('repeat-customer-rate', 'children'),
+     Output('top-customers', 'children')],
      [Input('upload-data', 'contents'),
       Input('forecast-period', 'value'),
       Input('date-range-picker', 'start_date'),
@@ -199,6 +228,10 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             sales_weekday_fig, orders_weekday_fig = create_weekday_sales_graph(sales, start_date, end_date), create_weekday_orders_graph(sales, start_date, end_date)
             customer_cohorts_fig, cohort_triangle_table = customer_cohorts(sales)
             customer_segments_graph = customer_segments(sales, start_date_c, end_date_c)
+            total_segment_fig, mean_segment_fig = sales_per_segments(sales, start_date_c, end_date_c)
+            rpr = repeat_customer_rate(sales, start_date_c, end_date_c)
+            top_10 = top_clients(sales, start_date_c, end_date_c)
+
 
             # Create Dash table for 1 tab
             data_table = dash_table.DataTable(
@@ -215,9 +248,12 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             )
             return (data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig,
                     start_date, end_date, customer_cohorts_fig, cohort_triangle_table, customer_segments_graph,
-                    start_date_c, end_date_c)
+                    start_date_c, end_date_c, total_segment_fig, mean_segment_fig, rpr, top_10)
 
-    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", ""
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", "", {}, {}, "", ""
+
+
+
 #----------------------------------------------------------------------------------------------------------------------------------
 
 if __name__ == "__main__":
