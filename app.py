@@ -148,19 +148,102 @@ app.layout = html.Div([
                     # Horizontal bar plot
                     dbc.Col([
                         dbc.Row([
-                            dcc.Graph(id='total-segment-sales')
+                            dcc.RadioItems(
+                                id='graph-selector',
+                                options=[
+                                    {'label': 'Total Segment Sales', 'value': 'total'},
+                                    {'label': 'Mean Segment Sales', 'value': 'mean'}
+                                ],
+                                value='total',  # Default value
+                                labelStyle={'display': 'block'}
+                            ),
                         ]),
                         dbc.Row([
-                            dcc.Graph(id='mean-segment-sales')
+                            dcc.Graph(id='segment-sales-graph')
                         ])
-                    ])
+                    ], width=6)
                 ]),
 
                 dbc.Row([
-                    html.H4(id='top-customers'),
+                    dbc.Col([
+                        html.H4(id='top-customers'),
+                    ], width=6),
+
+                    dbc.Col([
+                        dcc.Graph(id='abc-analysis-customers')
+                    ], width=6)
                 ]),
 
-                html.H4("Product insights")
+                html.H4("Product insights"),
+
+                dbc.Row([
+                    html.Div([
+                        html.Label("Select Date Range:"),
+                        dcc.DatePickerRange(
+                            id='date-range-picker-products',
+                            start_date='2017-01-01',  # Default start date
+                            end_date='2023-12-31',    # Default end date
+                            display_format='YYYY-MM-DD',
+                            style={'width': '50%', 'marginTop': '10px'}
+                        ),
+                    ]),
+                    dcc.Graph(id='pareto-graph')
+                ]),
+
+                dbc.Row([
+                    dbc.Col([
+                        dcc.Graph(id='categories-performance-graph')
+                    ], width=10)
+                ]),
+
+                dbc.Row([
+                    dcc.Graph(id='long-tail-bubble-graph')
+                ]),
+
+                html.H4("Regional insights"),
+                html.Div([
+                    html.Label("Select Date Range:"),
+                    dcc.DatePickerRange(
+                        id='date-range-picker-regions',
+                        start_date='2017-01-01',  # Default start date
+                        end_date='2023-12-31',    # Default end date
+                        display_format='YYYY-MM-DD',
+                        style={'width': '50%', 'marginTop': '10px'}
+                    ),
+                ]),
+                dbc.Row([
+                    dcc.Dropdown(
+                        id='region-selector',
+                        options=[{'label': 'West', 'value': 'West'},
+                                 {'label': 'East', 'value': 'East'},
+                                 {'label': 'Central', 'value': 'Central'},
+                                 {'label': 'South', 'value': 'South'},
+                                 {'label': 'All', 'value': 'All'}],
+                        value= 'All',  # Default value
+                        style={'width': '50%'}
+                    ),
+                ]),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Row([
+                            dcc.Graph(id='map-graph')
+                        ]),
+                        dbc.Row([
+                            dcc.Graph(id='regional-sales-graph')
+                        ])
+
+                    ], width=6),
+                    dbc.Col([
+                        dbc.Row([
+                            dcc.Graph(id='top-states-graph')
+                        ]),
+                        dbc.Row([
+                            dcc.Graph(id='top-cities-graph')
+                        ]),
+                    ]),
+                ]),
+
+                html.H4('Operational insights'),
 
             ])
         ]),
@@ -186,19 +269,36 @@ app.layout = html.Div([
      Output('customer-segments', 'figure'),
      Output('date-range-picker-customer', 'start_date'),
      Output('date-range-picker-customer', 'end_date'),
-     Output('total-segment-sales', 'figure'),
-     Output('mean-segment-sales', 'figure'),
+     Output('segment-sales-graph', 'figure'),
      Output('repeat-customer-rate', 'children'),
-     Output('top-customers', 'children')],
+     Output('top-customers', 'children'),
+     Output('abc-analysis-customers', 'figure'),
+     Output('pareto-graph', 'figure'),
+     Output('date-range-picker-products', 'start_date'),
+     Output('date-range-picker-products', 'end_date'),
+     Output('categories-performance-graph', 'figure'),
+     Output('long-tail-bubble-graph', 'figure'),
+     Output('date-range-picker-regions', 'start_date'),
+     Output('date-range-picker-regions', 'end_date'),
+     Output('top-states-graph', 'figure'),
+     Output('top-cities-graph', 'figure'),
+     Output('map-graph', 'figure'),
+     Output('regional-sales-graph', 'figure')],
      [Input('upload-data', 'contents'),
       Input('forecast-period', 'value'),
       Input('date-range-picker', 'start_date'),
       Input('date-range-picker', 'end_date'),
       Input('date-range-picker-customer', 'start_date'),
-      Input('date-range-picker-customer', 'end_date')],
+      Input('date-range-picker-customer', 'end_date'),
+      Input('graph-selector', 'value'),
+      Input('date-range-picker-products', 'start_date'),
+      Input('date-range-picker-products', 'end_date'),
+      Input('date-range-picker-regions', 'start_date'),
+      Input('date-range-picker-regions', 'end_date'),
+      Input('region-selector', 'value')],
      State('upload-data', 'filename')
 )
-def update_output(contents, forecast_period, start_date, end_date, start_date_c, end_date_c, filename):
+def update_output(contents, forecast_period, start_date, end_date, start_date_c, end_date_c, selected_graph, start_date_p, end_date_p, start_date_r, end_date_r, selected_region, filename):
     if contents is not None:
         df = parse_contents(contents, filename)
         if isinstance(df, pd.DataFrame):
@@ -218,6 +318,12 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             if not start_date and not end_date:
                 start_date, end_date = generate_default_dates(sales)
 
+            if not start_date_p and not end_date_p:
+                start_date_p, end_date_p = generate_default_dates(sales)
+
+            if not start_date_r and not end_date_r:
+                start_date_r, end_date_r = generate_default_dates(sales)
+
             # Create a graph based on the date picker
             sales_graph = create_graph(sales, start_date, end_date)
 
@@ -228,11 +334,16 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             sales_weekday_fig, orders_weekday_fig = create_weekday_sales_graph(sales, start_date, end_date), create_weekday_orders_graph(sales, start_date, end_date)
             customer_cohorts_fig, cohort_triangle_table = customer_cohorts(sales)
             customer_segments_graph = customer_segments(sales, start_date_c, end_date_c)
-            total_segment_fig, mean_segment_fig = sales_per_segments(sales, start_date_c, end_date_c)
+            segment_sales_fig = sales_per_segments(sales, start_date_c, end_date_c, selected_graph)
             rpr = repeat_customer_rate(sales, start_date_c, end_date_c)
             top_10 = top_clients(sales, start_date_c, end_date_c)
-
-
+            abc_cust = abc_customers(sales, start_date_c, end_date_c)
+            pareto_fig = pareto_products(sales, start_date_p, end_date_p)
+            cat_performance = category_perfomance(sales, start_date_p, end_date_p)
+            lt_bubble = long_tail_analysis(sales, start_date_p, end_date_p)
+            fig_states, fig_cities = top_states_and_cities(sales, start_date_r, end_date_r, selected_region)
+            map_fig = regional_top_states(sales, start_date_r, end_date_r, selected_region)
+            regional_sales_fig = regional_sales_graph(sales, start_date_r, end_date_r, selected_region)
             # Create Dash table for 1 tab
             data_table = dash_table.DataTable(
                 df.to_dict('records'),
@@ -248,9 +359,10 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             )
             return (data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig,
                     start_date, end_date, customer_cohorts_fig, cohort_triangle_table, customer_segments_graph,
-                    start_date_c, end_date_c, total_segment_fig, mean_segment_fig, rpr, top_10)
+                    start_date_c, end_date_c, segment_sales_fig, rpr, top_10, abc_cust, pareto_fig, start_date_p, end_date_p, cat_performance, lt_bubble,
+                    start_date_r, end_date_r, fig_states, fig_cities, map_fig, regional_sales_fig)
 
-    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", "", {}, {}, "", ""
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", "", {}, "", "", {}, {}, "", "", {}, {}, "", "", {}, {}, {}, {}
 
 
 

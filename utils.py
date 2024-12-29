@@ -2,8 +2,6 @@ from pyexpat.errors import messages
 
 import pandas as pd
 import numpy as np
-from pandas.conftest import axis_1
-from pandas.tseries.offsets import MonthBegin
 from datetime import datetime, timedelta
 
 
@@ -12,8 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import GridSearchCV
-
 import io
 import base64
 from dash import html
@@ -62,7 +58,7 @@ def preprocess_data(sales):
     sales['Shipping_Time'] = (sales['Ship_Date'] - sales['Order_Date']).dt.days
 
     # Encode categorical features
-    categorical_cols = ['Ship_Mode', 'Segment', 'Category', 'City', 'State', 'Product_Name']
+    categorical_cols = ['Ship_Mode', 'Segment']
     label_encoders = {}
     for col in categorical_cols:
         label_encoders[col] = LabelEncoder()
@@ -352,7 +348,7 @@ def customer_segments(data, start_date, end_date):
     )
     return fig
 
-def sales_per_segments(data, start_date, end_date):
+def sales_per_segments(data, start_date, end_date, selected_graph):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
     total_sales_per_segment = filtered_sales.groupby('Segment')['Sales'].sum().reset_index()
 
@@ -364,30 +360,32 @@ def sales_per_segments(data, start_date, end_date):
     segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
     segment_sales['Segment'] = segment_sales['Segment'].map(segment_mapping)
 
-    fig_total = px.bar(segment_sales,
-                 x='Sales',
-                 y='Segment',
-                 orientation='h',
-                 title="Total Sales by Segment",
-                 labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'}
-                )
-    fig_total.update_layout(
-        height=300,  # Total height of the figure
-        bargap=0.2,  # Space between bars (smaller = thicker bars)
-    )
-    fig_mean = px.bar(segment_sales,
-                       x='Mean_Sales_Per_Order',
-                       y='Segment',
-                       orientation='h',
-                       title="Mean Order Value by Segment",
-                       labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'}
-                       )
-    fig_mean.update_layout(
-        height=300,  # Total height of the figure
-        bargap=0.2,  # Space between bars (smaller = thicker bars)
-    )
+    if selected_graph == 'total':
+        fig= px.bar(segment_sales,
+                     x='Sales',
+                     y='Segment',
+                     orientation='h',
+                     title="Total Sales by Segment",
+                     labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'}
+                    )
+        fig.update_layout(
+            height=300,  # Total height of the figure
+            bargap=0.2,  # Space between bars (smaller = thicker bars)
+        )
+    elif selected_graph == 'mean':
+        fig= px.bar(segment_sales,
+                           x='Mean_Sales_Per_Order',
+                           y='Segment',
+                           orientation='h',
+                           title="Mean Order Value by Segment",
+                           labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'}
+                           )
+        fig.update_layout(
+            height=300,  # Total height of the figure
+            bargap=0.2,  # Space between bars (smaller = thicker bars)
+        )
 
-    return fig_total, fig_mean
+    return fig
 
 def top_clients(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
@@ -439,20 +437,289 @@ def repeat_customer_rate(data, start_date, end_date):
 
     return rcr_percentage
 
-'''
-test_set = pd.read_csv('superstore_final_dataset.csv')
-test_sales = preprocess_data(test_set)
-test_monthly_sales = generate_monthly_sales(test_sales)
-test_model, error1, error2, X_test = train_model(test_monthly_sales)
-test_forecast = forecast_sales(test_model, test_monthly_sales, X_test, 3)
+def abc_customers(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    customer_sales = filtered_sales.groupby(['Customer_ID', 'Customer_Name'])['Sales'].sum().reset_index()
+    customer_sales = customer_sales.sort_values(by='Sales', ascending=False)
+    customer_sales['%_Contribution'] = (customer_sales['Sales'] / customer_sales['Sales'].sum()) * 100
+    customer_sales['Cumulative_%'] = customer_sales['%_Contribution'].cumsum()
 
-print(f"Prediction for the next 3 months: \n {test_forecast}")
-print(f"MAE: {error1}")
-print(f"RMSE: {error2}")
-print(test_forecast.info())
-'''
+    def classify_customer(cumulative_percentage):
+        if cumulative_percentage <= 80:
+            return 'A'
+        elif cumulative_percentage <= 95:
+            return 'B'
+        else:
+            return 'C'
 
+    customer_sales['Customer_Category'] = customer_sales['Cumulative_%'].apply(classify_customer)
+    category_totals = customer_sales.groupby('Customer_Category')['Sales'].sum().reset_index()
+    overall_total = category_totals['Sales'].sum()
+    category_totals['Percentage'] = (category_totals['Sales'] / overall_total) * 100
 
+    # Calculate the percentage of customers in each category
+    customer_count_by_category = customer_sales['Customer_Category'].value_counts()
+    total_customers = len(customer_sales)
+    customer_percentage_by_category = (customer_count_by_category / total_customers) * 100
+
+    # Prepare the X-axis labels to include customer percentage
+    category_totals['Category_Label'] = category_totals['Customer_Category'] + \
+                                        '\n(' + category_totals['Customer_Category'].map(
+        customer_percentage_by_category).round(2).astype(str) + '% of customers)'
+
+    fig = px.bar(category_totals, x='Category_Label', y='Sales', text='Percentage',
+                 title='ABC Analysis: Total Sales by Category',
+                 labels={'Sales': 'Total Sales ($)', 'Customer_Category': 'Category'})
+    fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
+
+    return fig
+
+def pareto_products(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    product_sales = filtered_sales.groupby('Product_Name')['Sales'].sum().reset_index()
+    product_sales = product_sales.sort_values(by='Sales', ascending=False)
+    product_sales['%_Contribution'] = (product_sales['Sales'] / product_sales['Sales'].sum()) * 100
+    product_sales['Cumulative_%'] = product_sales['%_Contribution'].cumsum()
+    top_20_percent_products = product_sales[product_sales['Cumulative_%'] <= 80]
+
+    # Create the Pareto chart using Plotly
+    fig = go.Figure()
+
+    # Bar chart for the values
+    fig.add_trace(go.Bar(
+        x=top_20_percent_products['Product_Name'],
+        y=top_20_percent_products['Sales'],
+        name='Sales',
+    ))
+
+    # Line chart for the cumulative percentage
+    fig.add_trace(go.Scatter(
+        x=top_20_percent_products['Product_Name'],
+        y=top_20_percent_products['Cumulative_%'],
+        name='Cumulative Percentage',
+        mode='lines+markers',
+        yaxis='y2'
+    ))
+
+    # Update layout
+    fig.update_layout(
+        title="Pareto Chart",
+        xaxis_title="Category",
+        yaxis_title="Value",
+        yaxis2=dict(
+            title="Cumulative Percentage",
+            overlaying='y',
+            side='right',
+            #tickformat="%"
+        ),
+        showlegend=False,
+    )
+
+    return fig
+
+def category_perfomance(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    # Aggregate sales for categories and subcategories
+    category_sales = filtered_sales.groupby('Category')['Sales'].sum().reset_index()
+    category_sales['Type'] = 'Category'  # Add a type column to distinguish categories
+    category_sales['Label'] = category_sales['Category']  # Create a label for plotting
+
+    subcategory_sales = filtered_sales.groupby(['Category', 'Sub_Category'])['Sales'].sum().reset_index()
+    subcategory_sales['Type'] = 'Sub_Category'  # Add a type column to distinguish subcategories
+    subcategory_sales['Label'] = subcategory_sales['Sub_Category']  # Create a label for plotting
+
+    # Sort categories by total sales in descending order
+    category_sales = category_sales.sort_values(by='Sales', ascending=False)
+
+    # Within each category, sort subcategories by sales in descending order
+    subcategory_sales = subcategory_sales.sort_values(by=['Category', 'Sales'], ascending=[True, False])
+
+    # Combine categories and subcategories into a single DataFrame
+    combined_sales = pd.concat([
+        category_sales[['Label', 'Sales', 'Type']],
+        subcategory_sales[['Label', 'Sales', 'Type']]
+    ])
+
+    # Create a custom y-axis that groups categories with their subcategories
+    y_labels = []
+    sales_values = []
+    colors = []
+    formatted_sales = []  # To store formatted sales values
+
+    for category in category_sales['Label']:
+        # Add the category bar
+        category_row = category_sales[category_sales['Label'] == category]
+        y_labels.append(category)  # Category label
+        sales = category_row['Sales'].values[0]
+        sales_values.append(sales)
+        colors.append('blue')  # Color for category bars
+        formatted_sales.append(f"${sales:,.2f}")  # Custom currency formatting
+
+        # Add subcategory bars for this category
+        subcategories = subcategory_sales[subcategory_sales['Category'] == category]
+        for _, row in subcategories.iterrows():
+            y_labels.append(f"  {row['Label']}")  # Indent for subcategories
+            sales = row['Sales']
+            sales_values.append(sales)
+            colors.append('orange')  # Color for subcategory bars
+            formatted_sales.append(f"${sales:,.2f}")  # Custom currency formatting
+
+    # Create the bar chart
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=y_labels,  # Custom y-axis labels
+        x=sales_values,  # Corresponding sales values
+        marker_color=colors,  # Custom colors for categories and subcategories
+        text=formatted_sales,  # Use formatted sales values for display
+        textposition='outside',  # Display text outside the bars
+        orientation='h'  # Set orientation to horizontal
+    ))
+
+    # Update layout
+    fig.update_layout(
+        title="Category and Subcategory Performance (Grouped and Sorted)",
+        xaxis_title="Sales",
+        yaxis_title="Categories and Subcategories",
+        xaxis=dict(tickformat='$,.2f'),  # Format x-axis as currency
+        showlegend=False,
+        bargap=0.2,  # Space between bars
+    )
+
+    return fig
+
+def long_tail_analysis(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    product_customer_count = filtered_sales.groupby('Product_ID')['Customer_ID'].nunique().reset_index()
+    customer_group_count = product_customer_count.groupby('Customer_ID')['Product_ID'].count().reset_index()
+    customer_group_count.columns = ['Number_of_Customers', 'Number_of_Products']
+    customer_group_count['Bubble_Size'] = customer_group_count['Number_of_Products']
+
+    fig = px.scatter(
+        customer_group_count,
+        x='Number_of_Customers',  # X-axis: Number of customers who bought the product
+        y='Number_of_Products',  # Y-axis: Number of products bought by X customers
+        size='Bubble_Size',  # Size of the bubble: Number of products
+        title="Bubble Plot of Products Bought by Number of Customers",
+        labels={'Number_of_Customers': 'Number of Customers', 'Number_of_Products': 'Number of Products'},
+        template='plotly',
+        size_max=50
+    )
+
+    for i, row in customer_group_count.iterrows():
+        # Horizontal line from Y-axis to the bubble
+        fig.add_shape(
+            go.layout.Shape(
+                type="line",
+                x0=0,  # Starting point on X-axis
+                y0=row['Number_of_Products'],  # Y position of the bubble
+                x1=row['Number_of_Customers'],  # X position of the bubble
+                y1=row['Number_of_Products'],  # Y position of the bubble
+                line=dict(color="blue", width=1, dash="dot")  # Customize line style
+            )
+        )
+        # Vertical line from X-axis to the bubble
+        fig.add_shape(
+            go.layout.Shape(
+                type="line",
+                x0=row['Number_of_Customers'],  # X position of the bubble
+                y0=0,  # Starting point on Y-axis
+                x1=row['Number_of_Customers'],  # X position of the bubble
+                y1=row['Number_of_Products'],  # Y position of the bubble
+                line=dict(color="red", width=1, dash="dot")  # Customize line style
+            )
+        )
+
+    return fig
+
+def top_states_and_cities(data, start_date, end_date, selected_region):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    if selected_region != 'All':
+        regional_sales = filtered_sales[filtered_sales['Region'] == selected_region]
+    else:
+        regional_sales = filtered_sales
+    # States
+    states_grouped = regional_sales.groupby('State')['Sales'].sum().reset_index()
+    top_states = states_grouped.sort_values(by='Sales', ascending=False).head(5)
+    # Cities
+    cities_grouped = regional_sales.groupby('City')['Sales'].sum().reset_index()
+    top_cities = cities_grouped.sort_values(by='Sales', ascending=False).head(5)
+
+    fig_states = px.bar(top_states, x='State', y='Sales',
+                        title='Top 5 Selling States',
+                        labels={'State': 'State', 'Sales': 'Total Sales'})
+
+    # Create Bar Chart for Top 5 Cities by Sales
+    fig_cities = px.bar(top_cities, x='City', y='Sales',
+                        title='Top 5 Selling Cities',
+                        labels={'City': 'City', 'Sales': 'Total Sales'})
+
+    return fig_states, fig_cities
+
+def regional_top_states(data, start_date, end_date, selected_region):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    filtered_sales['State'] = filtered_sales['State'].astype(str)
+    state_name_to_abbr = {
+        'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+        'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+        'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
+        'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+        'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+        'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+        'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+        'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM',
+        'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND',
+        'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+        'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD',
+        'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT',
+        'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
+        'Wisconsin': 'WI', 'Wyoming': 'WY'
+    }
+    filtered_sales['State'] = filtered_sales['State'].map(state_name_to_abbr)
+    if selected_region != 'All':
+        regional_sales =filtered_sales[filtered_sales['Region'] == selected_region]
+        state_sales = regional_sales.groupby('State')['Sales'].sum().reset_index()
+    else:
+        state_sales = filtered_sales.groupby('State')['Sales'].sum().reset_index()
+    # Create a choropleth map
+    fig = px.choropleth(
+        state_sales,
+        locations= 'State',  # Column with state names or abbreviations
+        locationmode='USA-states',  # Use state-level mapping
+        color='Sales',
+        color_continuous_scale='Blues',
+        scope='usa',  # Focus on the USA
+    )
+    return fig
+
+def regional_sales_graph(data, start_date, end_date, selected_region):
+    start_date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+    formatted_start_date = start_date_obj.strftime("%Y-%m")
+    end_date_obj = datetime.strptime(end_date, "%Y-%m-%d")
+    formatted_end_date = end_date_obj.strftime("%Y-%m")
+    if selected_region != 'All':
+        regional_data = data[data['Region'] == selected_region]
+    else:
+        regional_data = data
+    # Aggregate sales by 'month_year'
+    regional_data['Month_Year'] = regional_data['Order_Date'].dt.strftime('%Y-%m')
+    monthly_sales = regional_data.groupby('Month_Year')['Sales'].sum().reset_index()
+    monthly_sales['Month_Year'] = monthly_sales['Month_Year'].astype(str)
+    filtered_sales = monthly_sales[
+        (monthly_sales['Month_Year'] >= formatted_start_date) & (monthly_sales['Month_Year'] <= formatted_end_date)]
+
+    fig = px.line(
+        filtered_sales,
+        x='Month_Year',
+        y='Sales',
+        title="Sales Trend",
+        labels={'x': 'Month', 'y': 'Sales'}
+    )
+    return fig
+
+#def ship_mode_distribution(data, start_date, end_date):
+ #   filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+ #   orders_grouped = filtered_sales.groupby('Order_ID').agg({'Ship_Mode' : 'first'})
 
 
 
