@@ -87,12 +87,18 @@ app.layout = html.Div([
                 dbc.Row([
                     # Left column: total sales and growth rate
                     dbc.Col([
-                        html.H4("Total Revenue", style={'marginTop': '20px'}),
+                        html.Div("Total Revenue", style={'marginTop': '20px'}),
                         html.Div(id='total-revenue', style={'fontSize': '20px', 'marginBottom': '20px'}),
 
-                        html.H4("Average Growth Rate", style={'marginTop': '20px'}),
+                        html.Div("Average Growth Rate", style={'marginTop': '20px'}),
                         html.Div(id='growth-rate', style={'fontSize': '20px', 'marginBottom': '20px'}),
-                        html.Div(id='x-over-x', style={'fontSize': '20px', 'marginBottom': '20px'})
+                        html.Div(id='x-over-x', style={'fontSize': '20px', 'marginBottom': '20px'}),
+
+                        html.Div("Customers", style={'marginTop': '20px'}),
+                        html.Div(id='customers', style={'fontSize': '20px', 'marginBottom': '20px'}),
+
+                        html.Div("Orders", style={'marginTop': '20px'}),
+                        html.Div(id='orders', style={'fontSize': '20px', 'marginBottom': '20px'}),
                     ], width=2),
 
                     # Right column - a graph
@@ -244,7 +250,29 @@ app.layout = html.Div([
                 ]),
 
                 html.H4('Operational insights'),
-
+                html.Div([
+                    html.Label("Select Date Range:"),
+                    dcc.DatePickerRange(
+                        id='date-range-picker-operations',
+                        start_date='2017-01-01',  # Default start date
+                        end_date='2023-12-31',    # Default end date
+                        display_format='YYYY-MM-DD',
+                        style={'width': '50%', 'marginTop': '10px'}
+                    ),
+                ]),
+                dbc.Row([
+                    dbc.Col([
+                        dbc.Row([
+                            dcc.Graph(id='time-by-mode-boxplot')
+                        ]),
+                        dbc.Row([
+                            dcc.Graph(id='mode-by-segment-barplot')
+                        ]),
+                    ], width=6),
+                    dbc.Col([
+                        dcc.Graph(id='mode-distribution-pie')
+                    ], width=6)
+                ])
             ])
         ]),
     ]),
@@ -283,7 +311,14 @@ app.layout = html.Div([
      Output('top-states-graph', 'figure'),
      Output('top-cities-graph', 'figure'),
      Output('map-graph', 'figure'),
-     Output('regional-sales-graph', 'figure')],
+     Output('regional-sales-graph', 'figure'),
+     Output('date-range-picker-operations', 'start_date'),
+     Output('date-range-picker-operations', 'end_date'),
+     Output('time-by-mode-boxplot', 'figure'),
+     Output('mode-by-segment-barplot', 'figure'),
+     Output('mode-distribution-pie', 'figure'),
+     Output('customers', 'children'),
+     Output('orders', 'children')],
      [Input('upload-data', 'contents'),
       Input('forecast-period', 'value'),
       Input('date-range-picker', 'start_date'),
@@ -295,10 +330,12 @@ app.layout = html.Div([
       Input('date-range-picker-products', 'end_date'),
       Input('date-range-picker-regions', 'start_date'),
       Input('date-range-picker-regions', 'end_date'),
-      Input('region-selector', 'value')],
+      Input('region-selector', 'value'),
+      Input('date-range-picker-operations', 'start_date'),
+      Input('date-range-picker-operations', 'end_date')],
      State('upload-data', 'filename')
 )
-def update_output(contents, forecast_period, start_date, end_date, start_date_c, end_date_c, selected_graph, start_date_p, end_date_p, start_date_r, end_date_r, selected_region, filename):
+def update_output(contents, forecast_period, start_date, end_date, start_date_c, end_date_c, selected_graph, start_date_p, end_date_p, start_date_r, end_date_r, selected_region, start_date_o, end_date_o, filename):
     if contents is not None:
         df = parse_contents(contents, filename)
         if isinstance(df, pd.DataFrame):
@@ -324,6 +361,9 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             if not start_date_r and not end_date_r:
                 start_date_r, end_date_r = generate_default_dates(sales)
 
+            if not start_date_o and not end_date_o:
+                start_date_o, end_date_o = generate_default_dates(sales)
+
             # Create a graph based on the date picker
             sales_graph = create_graph(sales, start_date, end_date)
 
@@ -344,6 +384,10 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             fig_states, fig_cities = top_states_and_cities(sales, start_date_r, end_date_r, selected_region)
             map_fig = regional_top_states(sales, start_date_r, end_date_r, selected_region)
             regional_sales_fig = regional_sales_graph(sales, start_date_r, end_date_r, selected_region)
+            mode_distribution_fig = ship_mode_distribution(sales, start_date_o, end_date_o)
+            time_by_mode_fig = shipping_time_by_mode(sales, start_date_o, end_date_o)
+            mode_by_segment_fig = ship_mode_by_segment(sales, start_date_o, end_date_o)
+            total_customers, total_orders = total_customers_orders(sales, start_date, end_date)
             # Create Dash table for 1 tab
             data_table = dash_table.DataTable(
                 df.to_dict('records'),
@@ -360,9 +404,10 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
             return (data_table, f"File Uploaded: {filename}", forecast_table, total_r, av_growth, av_growth_message, sales_graph, sales_weekday_fig, orders_weekday_fig,
                     start_date, end_date, customer_cohorts_fig, cohort_triangle_table, customer_segments_graph,
                     start_date_c, end_date_c, segment_sales_fig, rpr, top_10, abc_cust, pareto_fig, start_date_p, end_date_p, cat_performance, lt_bubble,
-                    start_date_r, end_date_r, fig_states, fig_cities, map_fig, regional_sales_fig)
+                    start_date_r, end_date_r, fig_states, fig_cities, map_fig, regional_sales_fig, start_date_o, end_date_o,
+                    time_by_mode_fig, mode_by_segment_fig, mode_distribution_fig, total_customers, total_orders)
 
-    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", "", {}, "", "", {}, {}, "", "", {}, {}, "", "", {}, {}, {}, {}
+    return html.Div("No file uploaded yet."), "", html.Div("No forecast available."), "N/A", "N/A", "", {}, {}, {}, "", "", {}, "", {}, "", "", {}, "", "", {}, {}, "", "", {}, {}, "", "", {}, {}, {}, {}, "", "", {}, {}, {}, "N/A", "N/A"
 
 
 

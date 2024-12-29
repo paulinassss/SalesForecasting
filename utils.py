@@ -57,13 +57,6 @@ def preprocess_data(sales):
     sales['Quarter'] = sales['Order_Date'].dt.quarter
     sales['Shipping_Time'] = (sales['Ship_Date'] - sales['Order_Date']).dt.days
 
-    # Encode categorical features
-    categorical_cols = ['Ship_Mode', 'Segment']
-    label_encoders = {}
-    for col in categorical_cols:
-        label_encoders[col] = LabelEncoder()
-        sales[col] = label_encoders[col].fit_transform(sales[col])
-
     return sales
 
 def generate_monthly_sales(sales):
@@ -181,6 +174,12 @@ def create_graph(data, start_date, end_date):
         labels={'x': 'Month', 'y': 'Sales'}
     )
     return sales_trend_fig
+
+def total_customers_orders(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    num_of_customers =  filtered_sales['Customer_ID'].nunique()
+    num_of_orders = filtered_sales['Order_ID'].nunique()
+    return num_of_customers, num_of_orders
 
 def create_weekday_sales_graph(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
@@ -333,10 +332,6 @@ def customer_segments(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
     segment_sizes = filtered_sales.groupby('Segment')['Customer_ID'].nunique().reset_index()
     segment_sizes.columns = ['Segment', 'Customer_Count']
-
-    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
-    segment_sizes['Segment'] = segment_sizes['Segment'].map(segment_mapping)
-
     fig = px.pie(
         segment_sizes,
         names='Segment',
@@ -356,9 +351,6 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
     unique_orders_per_segment.columns = ['Segment', 'Unique_Order_Count']
     segment_sales = pd.merge(unique_orders_per_segment, total_sales_per_segment, on='Segment')
     segment_sales['Mean_Sales_Per_Order'] = segment_sales['Sales'] / segment_sales['Unique_Order_Count']
-
-    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
-    segment_sales['Segment'] = segment_sales['Segment'].map(segment_mapping)
 
     if selected_graph == 'total':
         fig= px.bar(segment_sales,
@@ -395,9 +387,6 @@ def top_clients(data, start_date, end_date):
     top_10_clients = clients.sort_values(by='Sales', ascending=False).head(10)
     top_10_clients.reset_index(drop=True, inplace=True)
     top_10_clients.index += 1
-
-    segment_mapping = {0: 'Consumer', 1: 'Corporate', 2: 'Home Office'}
-    top_10_clients['Segment'] = top_10_clients['Segment'].map(segment_mapping)
 
     table = dash_table.DataTable(
         data=top_10_clients.to_dict('records'),  # Convert DataFrame to dictionary
@@ -653,8 +642,8 @@ def top_states_and_cities(data, start_date, end_date, selected_region):
     fig_cities = px.bar(top_cities, x='City', y='Sales',
                         title='Top 5 Selling Cities',
                         labels={'City': 'City', 'Sales': 'Total Sales'})
-
     return fig_states, fig_cities
+
 
 def regional_top_states(data, start_date, end_date, selected_region):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
@@ -717,9 +706,47 @@ def regional_sales_graph(data, start_date, end_date, selected_region):
     )
     return fig
 
-#def ship_mode_distribution(data, start_date, end_date):
- #   filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
- #   orders_grouped = filtered_sales.groupby('Order_ID').agg({'Ship_Mode' : 'first'})
+def ship_mode_distribution(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    orders_grouped = filtered_sales.groupby('Order_ID').agg({'Ship_Mode' : 'first'})
+    ship_mode_counts = orders_grouped['Ship_Mode'].value_counts().reset_index()
+    ship_mode_counts.columns = ['Ship_Mode', 'Count']  # Rename columns
+    fig = px.pie(ship_mode_counts, names='Ship_Mode', values='Count', title='Distribution of Ship Modes')
+    return fig
+
+def shipping_time_by_mode(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    fig = px.box(filtered_sales, x='Ship_Mode', y='Shipping_Time',
+                 title='Shipping Time Distribution by Ship Mode',
+                 labels={'Ship_Mode': 'Shipping Mode', 'Shipping_Time': 'Shipping Time (days)'})
+
+    return fig
+
+def ship_mode_by_segment(data, start_date, end_date):
+    filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
+    order_ship_mode = filtered_sales.groupby(['Order_ID', 'Segment'])['Ship_Mode'].agg(lambda x: x.mode()[0]).reset_index()
+    ship_mode_preference = order_ship_mode.groupby(['Segment', 'Ship_Mode']).size().reset_index(name='Count')
+    total_per_segment = ship_mode_preference.groupby('Segment')['Count'].transform('sum')
+    ship_mode_preference['Percentage'] = (ship_mode_preference['Count'] / total_per_segment) * 100
+    fig = px.bar(
+        ship_mode_preference,
+        x='Segment',
+        y='Percentage',  # Use Percentage instead of Count for the y-axis
+        color='Ship_Mode',
+        title='Ship Mode Preferences by Segment (Percentage)',
+        labels={'Segment': 'Client Segment', 'Percentage': 'Percentage (%)'},
+        barmode='stack',  # Stacked bar chart to show percentage breakdown
+        category_orders={'Segment': ['Corporate', 'Home Office', 'Consumer']}  # Optional: Control segment order
+    )
+
+    # Customize the layout (optional)
+    fig.update_layout(
+        yaxis_tickformat=".1f",  # Format the y-axis as percentages (e.g., 25.0%)
+        yaxis_title="Percentage (%)",
+        xaxis_title="Client Segment",
+        legend_title="Ship Mode",
+    )
+    return fig
 
 
 
