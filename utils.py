@@ -150,8 +150,8 @@ def forecast_sales(rf_model, monthly_sales, X_test, forecast_period): #forecast_
 
     forecast_df = pd.DataFrame(forecast)
     forecast_df['Month_Year'] = forecast_df['Month_Year'].astype(str)
-    forecast_df['Sales'] = forecast_df['Sales'].astype(str)
-
+    forecast_df['Sales'] = forecast_df['Sales'].astype(float)  # Ensure the values are floats
+    forecast_df['Sales'] = forecast_df['Sales'].map("${:,.2f}".format)
     # Return the forecast for the next 3 month
     return forecast_df
 
@@ -321,9 +321,14 @@ def customer_cohorts(data):
     table = dash_table.DataTable(
         data=crosstab_conv,
         columns=columns,
-        style_table={'overflow': 'auto', 'width': '80%', 'margin': 'auto'},
-        style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
-        style_cell={'textAlign': 'center', 'padding': '2px', 'fontSize': '10px', 'maxWidth': '70px', 'lineHeight': '10px'},
+        style_table={'overflow': 'auto', 'margin': 'auto'},
+        style_header={
+            'backgroundColor': '#DEE4F3FF',
+            'fontWeight': 'bold',
+            'textAlign': 'center'
+        },
+        style_cell={'textAlign': 'left', 'fontSize': '0.5rem', 'color': '#0c315e'},
+        css=[{'selector': '.dash-spreadsheet tr', 'rule': 'height: 10px;'}],
     )
 
     return fig, table
@@ -391,15 +396,14 @@ def top_clients(data, start_date, end_date):
     table = dash_table.DataTable(
         data=top_10_clients.to_dict('records'),  # Convert DataFrame to dictionary
         columns=[{'name': col, 'id': col} for col in top_10_clients.columns],  # Columns for the table
-        style_header={'backgroundColor': 'rgb(230, 230, 230)', 'fontWeight': 'bold'},
-        style_cell={'textAlign': 'center', 'padding': '5px', 'fontSize': '14px'},
-        style_data_conditional=[
-            {
-                'if': {'row_index': 'odd'},
-                'backgroundColor': 'rgb(248, 248, 248)'
-            }
-        ],
-        page_size=10,  # Limit table to 10 rows per page
+        style_table={'overflow': 'auto', 'margin': 'auto'},
+        style_header={
+            'backgroundColor': '#DEE4F3FF',
+            'fontWeight': 'bold',
+            'textAlign': 'center'
+        },
+        style_cell={'textAlign': 'left', 'fontSize': '0.5rem', 'color': '#0c315e'},
+        css=[{'selector': '.dash-spreadsheet tr', 'rule': 'height: 10px;'}],
     )
 
     return table
