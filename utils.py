@@ -21,6 +21,7 @@ from dash import dash_table
 import warnings
 warnings.filterwarnings('ignore')
 
+custom_colors = ['#A6AEBF', '#C5D3E8', '#D0E8C5', '#A7C5EB', '#9ecbd0', '#cde8e2', '#d7f5e7']
 # def check_integrity(data)
 
 def parse_contents(contents, filename):
@@ -170,9 +171,19 @@ def create_graph(data, start_date, end_date):
         filtered_sales,
         x='Month_Year',
         y='Sales',
-        title="Sales Trend",
-        labels={'x': 'Month', 'y': 'Sales'}
-    )
+        labels={'Month_Year': 'Month', 'Sales': 'Sales'},
+    ).update_layout(
+        paper_bgcolor='rgb(233, 240, 255)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=25, r=25, t=25, b=25),
+        font_family='Inconsolata',
+        title=dict(text="Sales over time", font=dict(size=15), automargin=False, yref='paper')
+    ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+    ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    ).update_traces(
+        line=dict(color='#5470a5', width=1))
     return sales_trend_fig
 
 def total_customers_orders(data, start_date, end_date):
@@ -196,9 +207,21 @@ def create_weekday_sales_graph(data, start_date, end_date):
     })
 
     fig_sales = px.bar(weekday_sales, x='Weekday_Name', y='Avg_Sales',
-                       title="Average Sales per Weekday",
                        labels={'Weekday_Name': 'Weekday', 'Avg_Sales': 'Average Sales'},
-                       color='Weekday_Name')
+                       color='Weekday_Name',
+                       color_discrete_sequence=custom_colors).update_layout(
+        paper_bgcolor='rgb(233, 240, 255)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=25, r=25, t=25, b=25),
+        font_family='Inconsolata',
+        title=dict(text="Average sales per weekday", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4
+    ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+    ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    )
+    fig_sales.update_layout(showlegend=False)
     return fig_sales
 
 def create_weekday_orders_graph(data, start_date, end_date):
@@ -214,9 +237,21 @@ def create_weekday_orders_graph(data, start_date, end_date):
     })
 
     fig_orders = px.bar(weekday_orders, x='Weekday_Name', y='Avg_Orders',
-                        title="Average Orders per Weekday",
                         labels={'Weekday_Name': 'Weekday', 'Avg_Orders': 'Average Orders'},
-                        color='Weekday_Name')
+                        color='Weekday_Name',
+                        color_discrete_sequence=custom_colors).update_layout(
+        paper_bgcolor='rgb(233, 240, 255)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=25, r=25, t=25, b=25),
+        font_family='Inconsolata',
+        title=dict(text="Average number of orders per weekday", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4
+    ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+    ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    )
+    fig_orders.update_layout(showlegend=False)
     return fig_orders
 
 
@@ -281,21 +316,32 @@ def customer_cohorts(data):
 
     fig = px.bar(
         cohorts_size_df,
-        x='Time_Cohort',
-        y='Number_of_Customers',
+        y='Time_Cohort',
+        x='Number_of_Customers',
         title='Customer Cohorts by Quarters',
         labels={'Time_Cohort': 'Quarter', 'Number_of_Customers': 'Number of Customers'},
         text='Number_of_Customers',  # Display the number of customers on each bar
-        color='Time_Cohort'  # Optional: Add color to distinguish bars by quarter
+        color='Time_Cohort',
+        color_discrete_sequence=custom_colors,
+        orientation='h'
     )
 
     # Update the layout to improve appearance
     fig.update_layout(
         xaxis_title='Quarter',
         yaxis_title='Number of Customers',
-        showlegend=False  # Hide the legend, as the color is redundant
+        showlegend=False,  # Hide the legend, as the color is redundant
+        paper_bgcolor='rgb(233, 240, 255)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=25, r=25, t=25, b=25),
+        font_family='Inconsolata',
+        title=dict(text="Customer cohorts by quarters", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4
+    ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+    ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
     )
-
     base = candata.merge(cohorts, how='outer', indicator='join_type', validate='m:1', on= 'Customer_ID')
     base['Year_Quarter'] = base['Year_Quarter'].astype(str)
     base['Time_Cohort'] = base['Time_Cohort'].astype(str)
@@ -345,6 +391,14 @@ def customer_segments(data, start_date, end_date):
         hover_name='Segment',  # Show segment name when hovering over a bubble
         title="Customer Distribution by Segment",
         labels={'Customer_Count': 'Number of Customers'},
+        color_discrete_sequence=custom_colors,
+    ).update_layout(
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Average number of orders per weekday", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4
     )
     return fig
 
@@ -363,12 +417,21 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
                      y='Segment',
                      orientation='h',
                      title="Total Sales by Segment",
-                     labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'}
+                     labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'},
+                    color_discrete_sequence=custom_colors
                     )
         fig.update_layout(
-            height=300,  # Total height of the figure
-            bargap=0.2,  # Space between bars (smaller = thicker bars)
-        )
+            paper_bgcolor='rgba(222, 228, 243, 0)',
+            plot_bgcolor='rgb(249, 251, 255)',
+            margin=dict(l=20, r=20, t=20, b=20),
+            font_family='Inconsolata',
+            title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
+            bargap=0.4
+        ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+        ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    )
     elif selected_graph == 'mean':
         fig= px.bar(segment_sales,
                            x='Mean_Sales_Per_Order',
@@ -378,9 +441,17 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
                            labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'}
                            )
         fig.update_layout(
-            height=300,  # Total height of the figure
-            bargap=0.2,  # Space between bars (smaller = thicker bars)
-        )
+            paper_bgcolor='rgba(222, 228, 243, 0)',
+            plot_bgcolor='rgb(249, 251, 255)',
+            margin=dict(l=20, r=20, t=20, b=20),
+            font_family='Inconsolata',
+            title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
+            bargap=0.4
+        ).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+        ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    )
 
     return fig
 

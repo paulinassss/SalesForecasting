@@ -67,17 +67,24 @@ app.layout = dbc.Container([
                         html.Label(["Select Forecast Period:"], className='regularText'),
                         dcc.Dropdown(
                             id='forecast-period',
+                            style={
+                                'backgroundColor': '#F0F4FFFF',
+                                'color': '#0c315e',
+                                'width': '150px'
+                            },
                             options=[
                                 {'label': '1 Month', 'value': 1},
                                 {'label': '3 Months', 'value': 3},
                                 {'label': '6 Months', 'value': 6},
                             ],
                             value=3,  # Default value
-                            style={'width': '50%', 'marginTop': '10px'}
+                            optionHeight=20,
+                            className='regularText',
+                            clearable=False
                         ),
-                    ]),
+                    ], className='inline-container'),
                     html.Div(id='output-forecast', className='regularText', style={
-                        'width': '50%'
+                        'width': '30%'
                     }),
                     html.H2(["General Sales Insights"], className='centeredText'),
                     # Date range selection for graph
@@ -88,9 +95,11 @@ app.layout = dbc.Container([
                             start_date='2017-01-01',  # Default start date
                             end_date='2023-12-31',    # Default end date
                             display_format='YYYY-MM-DD',
-                            style={'width': '50%', 'marginTop': '10px'}
+                            className='regularText',
+                            day_size=30,
+                            clearable=False
                         ),
-                    ]),
+                    ], className='inline-container'),
                     # Dashboard layout
                     dbc.Row([
                         # Left column: total sales and growth rate
@@ -116,56 +125,82 @@ app.layout = dbc.Container([
                                 html.Div(id='orders', className='boldText'),
                             ], className='cube')
                         ], width=2),
-
                         # Right column - a graph
                         dbc.Col([
-                            dcc.Graph(id='sales-graph'),
-                            # Create a row for Most Selling Weekdays and Most Orders Weekdays
+                            dcc.Graph(id='sales-graph', style={
+                                'margin': 'auto',
+                                'padding': '0',
+                                'height': '50vh',
+                            }),
                             dbc.Row([
                                 dbc.Col([
                                     # Graph for Most Selling Weekdays
-                                    dcc.Graph(id='av-sales-weekday')
+                                    dcc.Graph(id='av-sales-weekday', className='regularText', style={
+                                        'padding': '0',
+                                        'width': '70vh',
+                                        'height': '60vh',
+                                    })
                                 ], width=6),  # Half-width column for first graph
 
                                 dbc.Col([
                                     # Graph for Most Orders Weekdays
-                                    dcc.Graph(id='av-orders-weekday')
-                                ], width=6),  # Half-width column for second graph
-                            ])
-                        ], width=10)
+                                    dcc.Graph(id='av-orders-weekday', style={
+                                        'padding': '0',
+                                        'width': '70vh',
+                                        'height': '60vh',
+                                    })
+                                ], width=6),
+                            ]),
+                            # Create a row for Most Selling Weekdays and Most Orders Weekdays
+                        ], width=10),
                     ]),
+
                     html.H2(["Customer Insights"], className='centeredText'),
                     dbc.Row([
                         dbc.Col([
-                            dcc.Graph(id='customer-cohorts')
-                        ], width=4, style={'padding': '0px', 'margin': '0px'}),
-
-                        dbc.Col([
-                            html.Div(id='cohort-triangle')
-                        ], width=8, style={'padding': '0px'})
-                    ]),
-                    dbc.Row([
-                        html.Div([
-                            html.Label(["Select Date Range:"], className='regularText'),
-                            dcc.DatePickerRange(
-                                id='date-range-picker-customer',
-                                start_date='2017-01-01',  # Default start date
-                                end_date='2023-12-31',    # Default end date
-                                display_format='YYYY-MM-DD',
-                                style={'width': '50%', 'marginTop': '10px'}
-                            ),
-                        ]),
-
-                        # Pie plot
-                        dbc.Col([
                             dbc.Row([
-                                dcc.Graph(id='customer-segments')
+                                html.Div([
+                                    html.Label(["Select Date Range:"], className='regularText'),
+                                    dcc.DatePickerRange(
+                                        id='date-range-picker-customer',
+                                        start_date='2017-01-01',  # Default start date
+                                        end_date='2023-12-31',    # Default end date
+                                        display_format='YYYY-MM-DD',
+                                        className='regularText',
+                                        day_size=30,
+                                        clearable=False
+                                    ),
+                                ]),
+                            ], style={'marginBottom': '10px'}),
+                            dbc.Row([
+                                dcc.Graph(id='customer-segments', style={
+                                        'padding': '0',
+                                        'width': '70vh',
+                                        'height': '70vh',
+                                })
                             ]),
                             dbc.Row([
-                                html.Div("Repeat Customer Rate"),
-                                html.Div(id='repeat-customer-rate')
+                                html.Div([
+                                    html.Div(["Repeat Customer Rate"], className='regularText centeredText'),
+                                    html.Div(id='repeat-customer-rate', className='boldText')
+                                ], className='cube')
                             ])
-                        ], width=6),
+                        ], width=4),
+                        dbc.Col([
+                            dbc.Row([
+                                html.Div([
+                                    'Cohort Triangle'
+                                ], className='regularText', style={'marginBottom': '5px', 'fontSize': '0.9rem'}),
+                                html.Div(id='cohort-triangle')
+                            ]),
+                            dbc.Row([
+                                dcc.Graph(id='customer-cohorts', style={
+                                    'height': '70vh'
+                                })
+                            ])
+
+                        ], width=8),
+
 
                         # Horizontal bar plot
                         dbc.Col([
@@ -177,11 +212,14 @@ app.layout = dbc.Container([
                                         {'label': 'Mean Segment Sales', 'value': 'mean'}
                                     ],
                                     value='total',  # Default value
-                                    labelStyle={'display': 'block'}
+                                    labelStyle={'display': 'block'},
+                                    className='regularText'
                                 ),
                             ]),
                             dbc.Row([
-                                dcc.Graph(id='segment-sales-graph')
+                                dcc.Graph(id='segment-sales-graph', style={
+                                    'height': '30vh'
+                                })
                             ])
                         ], width=6)
                     ]),
@@ -206,9 +244,11 @@ app.layout = dbc.Container([
                                 start_date='2017-01-01',  # Default start date
                                 end_date='2023-12-31',    # Default end date
                                 display_format='YYYY-MM-DD',
-                                style={'width': '50%', 'marginTop': '10px'}
+                                className='regularText',
+                                day_size=30,
+                                clearable=False
                             ),
-                        ]),
+                        ], className='inline-container'),
                         dcc.Graph(id='pareto-graph')
                     ]),
 
@@ -230,19 +270,28 @@ app.layout = dbc.Container([
                             start_date='2017-01-01',  # Default start date
                             end_date='2023-12-31',    # Default end date
                             display_format='YYYY-MM-DD',
-                            style={'width': '50%', 'marginTop': '10px'}
+                            className='regularText',
+                            day_size=30,
+                            clearable=False
                         ),
-                    ]),
+                    ],className='inline-container'),
                     dbc.Row([
                         dcc.Dropdown(
                             id='region-selector',
+                            style={
+                                'backgroundColor': '#F0F4FFFF',
+                                'color': '#0c315e',
+                                'width': '150px'
+                            },
                             options=[{'label': 'West', 'value': 'West'},
                                      {'label': 'East', 'value': 'East'},
                                      {'label': 'Central', 'value': 'Central'},
                                      {'label': 'South', 'value': 'South'},
                                      {'label': 'All', 'value': 'All'}],
                             value= 'All',  # Default value
-                            style={'width': '50%'}
+                            optionHeight=10,
+                            className='regularText',
+                            clearable=False,
                         ),
                     ]),
                     dbc.Row([
@@ -273,9 +322,11 @@ app.layout = dbc.Container([
                             start_date='2017-01-01',  # Default start date
                             end_date='2023-12-31',    # Default end date
                             display_format='YYYY-MM-DD',
-                            style={'width': '50%', 'marginTop': '10px'}
+                            className='regularText',
+                            day_size=30,
+                            clearable=False
                         ),
-                    ]),
+                    ], className='inline-container'),
                     dbc.Row([
                         dbc.Col([
                             dbc.Row([
