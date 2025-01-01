@@ -397,8 +397,7 @@ def customer_segments(data, start_date, end_date):
         plot_bgcolor='rgb(249, 251, 255)',
         margin=dict(l=20, r=20, t=20, b=20),
         font_family='Inconsolata',
-        title=dict(text="Average number of orders per weekday", font=dict(size=15), automargin=False, yref='paper'),
-        bargap=0.4
+        title=dict(text="Average number of orders per weekday", font=dict(size=15), automargin=False, yref='paper')
     )
     return fig
 
@@ -413,45 +412,50 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
 
     if selected_graph == 'total':
         fig= px.bar(segment_sales,
-                     x='Sales',
-                     y='Segment',
-                     orientation='h',
-                     title="Total Sales by Segment",
-                     labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'},
-                    color_discrete_sequence=custom_colors
-                    )
+            x='Sales',
+            y='Segment',
+            orientation='h',
+            title="Total Sales by Segment",
+            labels={'Sales': 'Total Sales ($)', 'Segment': 'Segment'},
+            color='Segment',
+            color_discrete_sequence=custom_colors
+            )
         fig.update_layout(
             paper_bgcolor='rgba(222, 228, 243, 0)',
             plot_bgcolor='rgb(249, 251, 255)',
             margin=dict(l=20, r=20, t=20, b=20),
             font_family='Inconsolata',
             title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
-            bargap=0.4
+            bargap=0.4,
+            showlegend=False
         ).update_xaxes(
-        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
         ).update_yaxes(
-        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
-    )
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
     elif selected_graph == 'mean':
         fig= px.bar(segment_sales,
-                           x='Mean_Sales_Per_Order',
-                           y='Segment',
-                           orientation='h',
-                           title="Mean Order Value by Segment",
-                           labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'}
-                           )
+           x='Mean_Sales_Per_Order',
+           y='Segment',
+           orientation='h',
+           title="Mean Order Value by Segment",
+           labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'},
+           color='Segment',
+           color_discrete_sequence=custom_colors
+        )
         fig.update_layout(
             paper_bgcolor='rgba(222, 228, 243, 0)',
             plot_bgcolor='rgb(249, 251, 255)',
             margin=dict(l=20, r=20, t=20, b=20),
             font_family='Inconsolata',
             title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
-            bargap=0.4
+            bargap=0.4,
+            showlegend=False
         ).update_xaxes(
-        showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
         ).update_yaxes(
-        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
-    )
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
 
     return fig
 
@@ -532,8 +536,21 @@ def abc_customers(data, start_date, end_date):
         customer_percentage_by_category).round(2).astype(str) + '% of customers)'
 
     fig = px.bar(category_totals, x='Category_Label', y='Sales', text='Percentage',
-                 title='ABC Analysis: Total Sales by Category',
-                 labels={'Sales': 'Total Sales ($)', 'Customer_Category': 'Category'})
+            labels={'Sales': 'Total Sales ($)', 'Category_Label': 'Category'},
+            color='Customer_Category',
+            color_discrete_sequence=custom_colors).update_layout(
+            paper_bgcolor='rgba(222, 228, 243, 0)',
+            plot_bgcolor='rgb(249, 251, 255)',
+            margin=dict(l=20, r=20, t=20, b=20),
+            font_family='Inconsolata',
+            title=dict(text="ABC Analysis: Total Sales by Category", font=dict(size=15), automargin=False, yref='paper'),
+            bargap=0.4,
+            showlegend=False
+        ).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
     fig.update_traces(texttemplate='%{text:.2f}%', textposition='outside')
 
     return fig
@@ -567,7 +584,6 @@ def pareto_products(data, start_date, end_date):
 
     # Update layout
     fig.update_layout(
-        title="Pareto Chart",
         xaxis_title="Category",
         yaxis_title="Value",
         yaxis2=dict(
@@ -577,7 +593,17 @@ def pareto_products(data, start_date, end_date):
             #tickformat="%"
         ),
         showlegend=False,
-    )
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=22, r=22, t=22, b=22),
+        font_family='Inconsolata',
+        title=dict(text="Pareto Analysis", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4
+    ).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
 
     return fig
 
@@ -593,16 +619,16 @@ def category_perfomance(data, start_date, end_date):
     subcategory_sales['Label'] = subcategory_sales['Sub_Category']  # Create a label for plotting
 
     # Sort categories by total sales in descending order
-    category_sales = category_sales.sort_values(by='Sales', ascending=False)
+    category_sales = category_sales.sort_values(by='Sales', ascending=True)
 
     # Within each category, sort subcategories by sales in descending order
-    subcategory_sales = subcategory_sales.sort_values(by=['Category', 'Sales'], ascending=[True, False])
+    subcategory_sales = subcategory_sales.sort_values(by=['Category', 'Sales'], ascending=[True, True])
 
-    # Combine categories and subcategories into a single DataFrame
-    combined_sales = pd.concat([
-        category_sales[['Label', 'Sales', 'Type']],
-        subcategory_sales[['Label', 'Sales', 'Type']]
-    ])
+    ## Combine categories and subcategories into a single DataFrame
+    #combined_sales = pd.concat([
+    #    category_sales[['Label', 'Sales', 'Type']],
+     #   subcategory_sales[['Label', 'Sales', 'Type']]
+    #])
 
     # Create a custom y-axis that groups categories with their subcategories
     y_labels = []
@@ -611,23 +637,21 @@ def category_perfomance(data, start_date, end_date):
     formatted_sales = []  # To store formatted sales values
 
     for category in category_sales['Label']:
-        # Add the category bar
-        category_row = category_sales[category_sales['Label'] == category]
-        y_labels.append(category)  # Category label
-        sales = category_row['Sales'].values[0]
-        sales_values.append(sales)
-        colors.append('blue')  # Color for category bars
-        formatted_sales.append(f"${sales:,.2f}")  # Custom currency formatting
 
-        # Add subcategory bars for this category
         subcategories = subcategory_sales[subcategory_sales['Category'] == category]
         for _, row in subcategories.iterrows():
             y_labels.append(f"  {row['Label']}")  # Indent for subcategories
             sales = row['Sales']
             sales_values.append(sales)
-            colors.append('orange')  # Color for subcategory bars
+            colors.append('#9ecbd0')  # Color for subcategory bars
             formatted_sales.append(f"${sales:,.2f}")  # Custom currency formatting
 
+        category_row = category_sales[category_sales['Label'] == category]
+        y_labels.append(category)  # Category label
+        sales = category_row['Sales'].values[0]
+        sales_values.append(sales)
+        colors.append('#A6AEBF')  # Color for category bars
+        formatted_sales.append(f"${sales:,.2f}")  # Custom currency formatting
     # Create the bar chart
     fig = go.Figure()
 
@@ -642,13 +666,21 @@ def category_perfomance(data, start_date, end_date):
 
     # Update layout
     fig.update_layout(
-        title="Category and Subcategory Performance (Grouped and Sorted)",
         xaxis_title="Sales",
         yaxis_title="Categories and Subcategories",
         xaxis=dict(tickformat='$,.2f'),  # Format x-axis as currency
         showlegend=False,
-        bargap=0.2,  # Space between bars
-    )
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Category and Subcategory Performance", font=dict(size=15), automargin=False, yref='paper'),
+        bargap=0.4,
+    ).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
 
     return fig
 
@@ -667,7 +699,8 @@ def long_tail_analysis(data, start_date, end_date):
         title="Bubble Plot of Products Bought by Number of Customers",
         labels={'Number_of_Customers': 'Number of Customers', 'Number_of_Products': 'Number of Products'},
         template='plotly',
-        size_max=50
+        size_max=50,
+        color_discrete_sequence=['#A7C5EB']
     )
 
     for i, row in customer_group_count.iterrows():
@@ -694,6 +727,18 @@ def long_tail_analysis(data, start_date, end_date):
             )
         )
 
+    fig.update_layout(
+        showlegend=False,
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Long-tail Analysis (Number of products by number of customers)", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
+
     return fig
 
 def top_states_and_cities(data, start_date, end_date, selected_region):
@@ -709,14 +754,39 @@ def top_states_and_cities(data, start_date, end_date, selected_region):
     cities_grouped = regional_sales.groupby('City')['Sales'].sum().reset_index()
     top_cities = cities_grouped.sort_values(by='Sales', ascending=False).head(5)
 
-    fig_states = px.bar(top_states, x='State', y='Sales',
+    fig_states = px.bar(top_states, y='State', x='Sales',
                         title='Top 5 Selling States',
-                        labels={'State': 'State', 'Sales': 'Total Sales'})
-
+                        labels={'State': 'State', 'Sales': 'Total Sales'},
+                        color='State',
+                        color_discrete_sequence=custom_colors,
+                        orientation='h').update_layout(
+                                paper_bgcolor='rgba(222, 228, 243, 0)',
+                                plot_bgcolor='rgb(249, 251, 255)',
+                                margin=dict(l=25, r=25, t=25, b=25),
+                                font_family='Inconsolata',
+                                showlegend=False,
+                                title=dict(text="Top 5 selling states", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+                                    showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                ).update_yaxes(
+                                    showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                )
     # Create Bar Chart for Top 5 Cities by Sales
-    fig_cities = px.bar(top_cities, x='City', y='Sales',
+    fig_cities = px.bar(top_cities, y='City', x='Sales',
                         title='Top 5 Selling Cities',
-                        labels={'City': 'City', 'Sales': 'Total Sales'})
+                        labels={'City': 'City', 'Sales': 'Total Sales'},
+                        color='City',
+                        color_discrete_sequence=custom_colors,
+                        orientation='h').update_layout(
+                                paper_bgcolor='rgba(222, 228, 243, 0)',
+                                plot_bgcolor='rgb(249, 251, 255)',
+                                margin=dict(l=25, r=25, t=25, b=25),
+                                font_family='Inconsolata',
+                                showlegend=False,
+                                title=dict(text="Top 5 selling cities", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+                                    showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                ).update_yaxes(
+                                    showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                )
     return fig_states, fig_cities
 
 
@@ -753,7 +823,16 @@ def regional_top_states(data, start_date, end_date, selected_region):
         color='Sales',
         color_continuous_scale='Blues',
         scope='usa',  # Focus on the USA
-    )
+    ).update_layout(
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Top - selling states", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        )
     return fig
 
 def regional_sales_graph(data, start_date, end_date, selected_region):
@@ -777,8 +856,18 @@ def regional_sales_graph(data, start_date, end_date, selected_region):
         x='Month_Year',
         y='Sales',
         title="Sales Trend",
-        labels={'x': 'Month', 'y': 'Sales'}
-    )
+        labels={'Month_Year': 'Month & Year', 'Sales': 'Total Sales ($)'}
+    ).update_layout(
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Sales over time", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        ).update_yaxes(
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        ).update_traces(
+        line=dict(color='#5470a5', width=1))
     return fig
 
 def ship_mode_distribution(data, start_date, end_date):
@@ -786,15 +875,33 @@ def ship_mode_distribution(data, start_date, end_date):
     orders_grouped = filtered_sales.groupby('Order_ID').agg({'Ship_Mode' : 'first'})
     ship_mode_counts = orders_grouped['Ship_Mode'].value_counts().reset_index()
     ship_mode_counts.columns = ['Ship_Mode', 'Count']  # Rename columns
-    fig = px.pie(ship_mode_counts, names='Ship_Mode', values='Count', title='Distribution of Ship Modes')
+    fig = px.pie(ship_mode_counts, names='Ship_Mode', values='Count', color_discrete_sequence = custom_colors, color='Ship_Mode').update_layout(
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Ship modes distribution", font=dict(size=15), automargin=False, yref='paper'),
+    )
     return fig
 
 def shipping_time_by_mode(data, start_date, end_date):
     filtered_sales = data[(data['Order_Date'] >= start_date) & (data['Order_Date'] <= end_date)]
     fig = px.box(filtered_sales, x='Ship_Mode', y='Shipping_Time',
                  title='Shipping Time Distribution by Ship Mode',
-                 labels={'Ship_Mode': 'Shipping Mode', 'Shipping_Time': 'Shipping Time (days)'})
-
+                 labels={'Ship_Mode': 'Shipping Mode', 'Shipping_Time': 'Shipping Time (days)'},
+                 color_discrete_sequence=['#0c315e']).update_layout(
+                    paper_bgcolor='rgba(222, 228, 243, 0)',
+                    plot_bgcolor='rgb(249, 251, 255)',
+                    margin=dict(l=20, r=20, t=20, b=20),
+                    font_family='Inconsolata',
+                    title=dict(text="Shipping time distribution by ship mode", font=dict(size=15), automargin=False, yref='paper')).update_xaxes(
+                        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                    ).update_yaxes(
+                        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                    ).update_traces(
+                        whiskerwidth=0.5,
+                        line_width=1
+                    )
     return fig
 
 def ship_mode_by_segment(data, start_date, end_date):
@@ -808,6 +915,7 @@ def ship_mode_by_segment(data, start_date, end_date):
         x='Segment',
         y='Percentage',  # Use Percentage instead of Count for the y-axis
         color='Ship_Mode',
+        color_discrete_sequence=custom_colors,
         title='Ship Mode Preferences by Segment (Percentage)',
         labels={'Segment': 'Client Segment', 'Percentage': 'Percentage (%)'},
         barmode='stack',  # Stacked bar chart to show percentage breakdown
@@ -820,6 +928,15 @@ def ship_mode_by_segment(data, start_date, end_date):
         yaxis_title="Percentage (%)",
         xaxis_title="Client Segment",
         legend_title="Ship Mode",
+        paper_bgcolor='rgba(222, 228, 243, 0)',
+        plot_bgcolor='rgb(249, 251, 255)',
+        margin=dict(l=20, r=20, t=20, b=20),
+        font_family='Inconsolata',
+        title=dict(text="Ship mode preferencies by segment", font=dict(size=15), automargin=False,
+                   yref='paper')).update_xaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    ).update_yaxes(
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
     )
     return fig
 

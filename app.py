@@ -230,7 +230,9 @@ app.layout = dbc.Container([
                         ], width=6),
 
                         dbc.Col([
-                            dcc.Graph(id='abc-analysis-customers')
+                            dcc.Graph(id='abc-analysis-customers', style={
+                                'width': '70vh',
+                            })
                         ], width=6)
                     ]),
 
@@ -289,29 +291,33 @@ app.layout = dbc.Container([
                                      {'label': 'South', 'value': 'South'},
                                      {'label': 'All', 'value': 'All'}],
                             value= 'All',  # Default value
-                            optionHeight=10,
+                            optionHeight=20,
                             className='regularText',
                             clearable=False,
                         ),
                     ]),
                     dbc.Row([
                         dbc.Col([
-                            dbc.Row([
-                                dcc.Graph(id='map-graph')
-                            ]),
-                            dbc.Row([
-                                dcc.Graph(id='regional-sales-graph')
-                            ])
+                            dcc.Graph(id='map-graph', style={'marginTop': '15px'})
+                        ]),
 
-                        ], width=6),
                         dbc.Col([
                             dbc.Row([
-                                dcc.Graph(id='top-states-graph')
+                                dcc.Graph(id='top-states-graph', style={
+                                    'height': '35vh'
+                                }),
                             ]),
                             dbc.Row([
-                                dcc.Graph(id='top-cities-graph')
-                            ]),
-                        ]),
+                                dcc.Graph(id='top-cities-graph', style={
+                                    'height': '35vh'
+                                }),
+                            ], style={'marginTop': '15px'})
+                        ], style={'marginTop': '15px'}),
+                    ]),
+                    dbc.Row([
+                        dcc.Graph(id='regional-sales-graph', style={
+                                    'height': '50vh'
+                        })
                     ]),
 
                     html.H2(['Operational insights'], className='centeredText'),
@@ -337,7 +343,11 @@ app.layout = dbc.Container([
                             ]),
                         ], width=6),
                         dbc.Col([
-                            dcc.Graph(id='mode-distribution-pie')
+                            dcc.Graph(id='mode-distribution-pie', style={
+                                        'padding': '0',
+                                        'width': '70vh',
+                                        'height': '70vh',
+                                })
                         ], width=6)
                     ])
                 ])
