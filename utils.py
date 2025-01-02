@@ -1,5 +1,3 @@
-from pyexpat.errors import messages
-
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -9,7 +7,7 @@ from datetime import datetime, timedelta
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import LabelEncoder
+
 import io
 import base64
 from dash import html
