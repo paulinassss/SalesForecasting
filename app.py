@@ -9,8 +9,10 @@ import datetime
 import io
 import base64
 
-from jedi.api.refactoring import inline
 
+from data_analysis import *
+from preprocess_data import *
+from machine_learning import *
 from utils import *
 
 # Initialize the dash app
@@ -442,7 +444,7 @@ def update_output(contents, forecast_period, start_date, end_date, start_date_c,
                 start_date_o, end_date_o = generate_default_dates(sales)
 
             # Create a graph based on the date picker
-            sales_graph = create_graph(sales, start_date, end_date)
+            sales_graph = regional_sales_graph(sales, start_date, end_date, 'All')
 
             # Calculate total sales based on the date picker
             total_r = total_revenue(sales, start_date, end_date)
