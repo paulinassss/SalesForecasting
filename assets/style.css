@@ -1,0 +1,111 @@
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@200..900&family=Karla:ital,wght@0,200..800;1,200..800&display=swap');
+
+
+body {
+    background-color: rgb(233, 240, 255);
+    margin-top: 0.5rem;
+}
+
+h1 {
+    font-family: Karla, sans-serif;
+    font-size: 1.3rem;
+    color: #061c37;
+}
+
+h2 {
+    font-family: Karla, sans-serif;
+    font-size: 1.1rem;
+    color: #061c37;
+    margin: 15px;
+}
+
+.upload {
+    background-color: rgb(222, 228, 243);
+    width: 40%;
+    height: 30px;
+    line-height: 60px;
+    border-width: 0.8px;
+    border-style: dashed;
+    border-radius: 5px;
+    border-color: rgba(1, 16, 62, 0.43);
+    text-align: center;
+    margin: auto;
+    display:flex;
+    justify-content: center;
+    align-items: center;
+}
+.regularText {
+    font-family: Inconsolata, sans-serif;
+    font-size: 0.8rem;
+    color: #0c315e;
+}
+
+.boldText {
+    font-family: Inconsolata, sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    color: #0c315e;
+}
+
+.lowkeyText {
+    font-family: Inconsolata, sans-serif;
+    font-weight: 300;
+    font-size: 0.5rem;
+    color: #40465a;
+}
+.centeredText {
+    display: flex;
+    justify-content: center;
+    text-align: center;
+}
+
+.spreadsheet {
+    overflow: auto;
+    background-color: rgb(240, 244, 255);
+}
+
+.customTabs {
+    padding: 0;
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    height: 20px;
+}
+
+.cube {
+    background-color: rgb(249, 251, 255);
+    border-radius: 5px;
+    width: 9rem;
+    height: 6rem;
+    text-align: center;
+    align-content: center;
+    margin: 5px;
+    margin-left: 10px;
+}
+
+.inline-container {
+    display: flex;
+    align-items: center; /* Align vertically */
+    gap: 10px; /* Space between label and dropdown */
+    margin-bottom: 10px;
+    margin-left: 10px;
+}
+
+.DateInput_input, .DateInput_input_1 {
+    width: 80px;
+    height: 20px;
+    font-size: 0.8rem;
+    color: #0c315e;
+    text-align: center;
+    padding: 0;
+}
+
+.DateInput {
+    width: 80px;
+}
+
+.DateRangePickerInput_arrow_svg {
+    height: 12px;
+    width: 12px;
+    color: #061c37;
+}
