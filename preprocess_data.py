@@ -12,7 +12,6 @@ warnings.filterwarnings('ignore')
 
 def parse_contents(contents, filename):
     content_type, content_string = contents.split(',')
-
     decoded = base64.b64decode(content_string)
     try:
         if 'csv' in filename:
@@ -27,12 +26,55 @@ def parse_contents(contents, filename):
             'There was an error processing this file.'
         ])
     return df
-# def check_integrity(data)
+
+def validate_dataset_format(user_df):
+    is_valid = False
+    # Oczekiwane nazwy kolumn i ich typy danych
+    expected_columns = {
+        "Row_ID": "int64",
+        "Order_ID": "object",
+        "Order_Date": "object",
+        "Ship_Date": "object",
+        "Ship_Mode": "object",
+        "Customer_ID": "object",
+        "Customer_Name": "object",
+        "Segment": "object",
+        "Country": "object",
+        "City": "object",
+        "State": "object",
+        "Postal_Code": "float64",
+        "Region": "object",
+        "Product_ID": "object",
+        "Category": "object",
+        "Sub_Category": "object",
+        "Product_Name": "object",
+        "Sales": "float64"
+    }
+    # Sprawdzenie, czy kolumny się zgadzają
+    user_columns = user_df.dtypes.to_dict()
+    user_columns = {col: str(dtype) for col, dtype in user_columns.items()}
+    # Porównanie nazw kolumn
+    missing_columns = set(expected_columns.keys()) - set(user_columns.keys())
+    extra_columns = set(user_columns.keys()) - set(expected_columns.keys())
+    if missing_columns:
+        return is_valid, html.Div([f"Missing columns: {missing_columns}"])
+    if extra_columns:
+        return is_valid, html.Div([f"Extra columns: {extra_columns}"])
+    # Porównanie typów danych
+    mismatched_types = {
+        col: {"expected": expected_columns[col], "actual": user_columns[col]}
+        for col in expected_columns
+        if expected_columns[col] != user_columns.get(col)
+    }
+    if mismatched_types:
+        return is_valid, html.Div([f"Data types do not match: {mismatched_types}"])
+    return is_valid, html.Div(["Dataset is valid!"])
 
 def preprocess_data(sales):
     # Clean Data
-    sales.drop(['Postal_Code'], axis=1, inplace=True)
-
+    sales.drop(['Row_ID', 'Postal_Code'], axis=1, inplace=True)
+    sales.dropna()
+    sales.drop_duplicates()
     # Modify Data
     sales['Order_Date'] = pd.to_datetime(sales['Order_Date'], format='%d/%m/%Y')
     sales['Ship_Date'] = pd.to_datetime(sales['Ship_Date'], format='%d/%m/%Y')

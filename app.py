@@ -35,12 +35,12 @@ app.layout = dbc.Container([
     html.Div(id='output-filename', className='regularText centeredText', style={'margin': '5px'}),
 
     # Tabs - first one displays a table of data that user has sent, other displays the dashboard
-        dcc.Tabs(
-            parent_className='customTabs',
-            style = {
-                'height': '5vh',
-            },
-            children=[
+    dcc.Tabs(
+        parent_className='customTabs',
+        style = {
+            'height': '5vh',
+        },
+        children=[
             # Tab 1: Display uploaded data
             dcc.Tab(label='Uploaded Data', style = {
                 'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
@@ -61,300 +61,366 @@ app.layout = dbc.Container([
                 'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
                 }, selected_style= {
                 'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF', 'color': '#0c315e',
-                },children=[
-                html.Div(style={'marginLeft': '10px'}, children=[
-                    html.H2(["Sales Forecast"], className='centeredText'),
-                    # Dropdown for selecting forecast period
-                    html.Div([
-                        html.Label(["Select Forecast Period:"], className='regularText'),
-                        dcc.Dropdown(
-                            id='forecast-period',
-                            style={
-                                'backgroundColor': '#F0F4FFFF',
-                                'color': '#0c315e',
-                                'width': '150px'
-                            },
-                            options=[
-                                {'label': '1 Month', 'value': 1},
-                                {'label': '3 Months', 'value': 3},
-                                {'label': '6 Months', 'value': 6},
-                            ],
-                            value=3,  # Default value
-                            optionHeight=20,
-                            className='regularText',
-                            clearable=False
-                        ),
-                    ], className='inline-container'),
-                    html.Div(id='output-forecast', className='regularText', style={
-                        'width': '30%'
-                    }),
-                    html.H2(["General Sales Insights"], className='centeredText'),
-                    # Date range selection for graph
-                    html.Div([
-                        html.Label(["Select Date Range:"], className='regularText'),
-                        dcc.DatePickerRange(
-                            id='date-range-picker',
-                            start_date='2017-01-01',  # Default start date
-                            end_date='2023-12-31',    # Default end date
-                            display_format='YYYY-MM-DD',
-                            className='regularText',
-                            day_size=30,
-                            clearable=False
-                        ),
-                    ], className='inline-container'),
-                    # Dashboard layout
-                    dbc.Row([
-                        # Left column: total sales and growth rate
-                        dbc.Col([
-                            html.Div([
-                                    html.Div("Total Revenue", className='regularText centeredText'),
-                                    html.Div(id='total-revenue', className='boldText centeredText'),
-                            ], className='cube'),
-
-                            html.Div([
-                                html.Div("Average Growth Rate", className='regularText'),
-                                html.Div(id='growth-rate', className='boldText'),
-                                html.Div(id='x-over-x', className='lowkeyText'),
-                            ], className='cube'),
-
-                            html.Div([
-                                html.Div("Customers", className='regularText'),
-                                html.Div(id='customers', className='boldText'),
-                            ], className='cube'),
-
-                            html.Div([
-                                html.Div("Orders", className='regularText'),
-                                html.Div(id='orders', className='boldText'),
-                            ], className='cube')
-                        ], width=2),
-                        # Right column - a graph
-                        dbc.Col([
-                            dcc.Graph(id='sales-graph', style={
-                                'margin': 'auto',
-                                'padding': '0',
-                                'height': '50vh',
-                            }),
-                            dbc.Row([
-                                dbc.Col([
-                                    # Graph for Most Selling Weekdays
-                                    dcc.Graph(id='av-sales-weekday', className='regularText', style={
-                                        'padding': '0',
-                                        'width': '70vh',
-                                        'height': '60vh',
-                                    })
-                                ], width=6),  # Half-width column for first graph
-
-                                dbc.Col([
-                                    # Graph for Most Orders Weekdays
-                                    dcc.Graph(id='av-orders-weekday', style={
-                                        'padding': '0',
-                                        'width': '70vh',
-                                        'height': '60vh',
-                                    })
-                                ], width=6),
-                            ]),
-                            # Create a row for Most Selling Weekdays and Most Orders Weekdays
-                        ], width=10),
-                    ]),
-
-                    html.H2(["Customer Insights"], className='centeredText'),
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Row([
-                                html.Div([
-                                    html.Label(["Select Date Range:"], className='regularText'),
-                                    dcc.DatePickerRange(
-                                        id='date-range-picker-customer',
-                                        start_date='2017-01-01',  # Default start date
-                                        end_date='2023-12-31',    # Default end date
-                                        display_format='YYYY-MM-DD',
-                                        className='regularText',
-                                        day_size=30,
-                                        clearable=False
-                                    ),
-                                ]),
-                            ], style={'marginBottom': '10px'}),
-                            dbc.Row([
-                                dcc.Graph(id='customer-segments', style={
-                                        'padding': '0',
-                                        'width': '70vh',
-                                        'height': '70vh',
-                                })
-                            ]),
-                            dbc.Row([
-                                html.Div([
-                                    html.Div(["Repeat Customer Rate"], className='regularText centeredText'),
-                                    html.Div(id='repeat-customer-rate', className='boldText')
-                                ], className='cube')
-                            ])
-                        ], width=4),
-                        dbc.Col([
-                            dbc.Row([
-                                html.Div([
-                                    'Cohort Triangle'
-                                ], className='regularText', style={'marginBottom': '5px', 'fontSize': '0.9rem'}),
-                                html.Div(id='cohort-triangle')
-                            ]),
-                            dbc.Row([
-                                dcc.Graph(id='customer-cohorts', style={
-                                    'height': '70vh'
-                                })
-                            ])
-
-                        ], width=8),
-
-
-                        # Horizontal bar plot
-                        dbc.Col([
-                            dbc.Row([
-                                dcc.RadioItems(
-                                    id='graph-selector',
-                                    options=[
-                                        {'label': 'Total Segment Sales', 'value': 'total'},
-                                        {'label': 'Mean Segment Sales', 'value': 'mean'}
-                                    ],
-                                    value='total',  # Default value
-                                    labelStyle={'display': 'block'},
-                                    className='regularText'
-                                ),
-                            ]),
-                            dbc.Row([
-                                dcc.Graph(id='segment-sales-graph', style={
-                                    'height': '30vh'
-                                })
-                            ])
-                        ], width=6)
-                    ]),
-
-                    dbc.Row([
-                        dbc.Col([
-                            html.H4(id='top-customers'),
-                        ], width=6),
-
-                        dbc.Col([
-                            dcc.Graph(id='abc-analysis-customers', style={
-                                'width': '70vh',
-                            })
-                        ], width=6)
-                    ]),
-
-                    html.H2(["Product insights"], className='centeredText'),
-
-                    dbc.Row([
-                        html.Div([
-                            html.Label(["Select Date Range:"], className='regularText'),
-                            dcc.DatePickerRange(
-                                id='date-range-picker-products',
-                                start_date='2017-01-01',  # Default start date
-                                end_date='2023-12-31',    # Default end date
-                                display_format='YYYY-MM-DD',
-                                className='regularText',
-                                day_size=30,
-                                clearable=False
+                }, className='regularText centeredText', children=[
+                    dcc.Tabs(
+                        parent_className='customTabs',
+                        style = {
+                            'height': '5vh',
+                        },
+                        children=[
+                            dcc.Tab(label='Forecast', style = {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
+                                }, selected_style= {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF', 'color': '#0c315e',
+                                },
+                                children=[
+                                    html.Div(style={'marginLeft': '10px'}, children=[
+                                        html.H2(["Sales Forecast"], className='centeredText'),
+                                        # Dropdown for selecting forecast period
+                                        html.Div([
+                                            html.Label(["Select Forecast Period:"], className='regularText'),
+                                            dcc.Dropdown(
+                                                id='forecast-period',
+                                                style={
+                                                    'backgroundColor': '#F0F4FFFF',
+                                                    'color': '#0c315e',
+                                                    'width': '150px'
+                                                },
+                                                options=[
+                                                    {'label': '1 Month', 'value': 1},
+                                                    {'label': '3 Months', 'value': 3},
+                                                    {'label': '6 Months', 'value': 6},
+                                                ],
+                                                value=3,  # Default value
+                                                optionHeight=20,
+                                                className='regularText',
+                                                clearable=False
+                                            ),
+                                        ], className='inline-container'),
+                                        html.Div(id='output-forecast', className='regularText', style={
+                                            'width': '30%'
+                                        }),
+                                    ])
+                                ]
                             ),
-                        ], className='inline-container'),
-                        dcc.Graph(id='pareto-graph')
-                    ]),
+                            dcc.Tab(label='General sales insights', style = {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
+                                }, selected_style= {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF', 'color': '#0c315e',
+                                },
+                                children=[
+                                    html.Div(style={'margin': '10px'}, children=[
+                                        html.H2(["General Sales Insights"], className='centeredText'),
+                                        # Date range selection for graph
+                                        html.Div([
+                                            html.Label(["Select Date Range:"], className='regularText',  style={'marginLeft': '20px'}),
+                                            dcc.DatePickerRange(
+                                                id='date-range-picker',
+                                                start_date='2017-01-01',  # Default start date
+                                                end_date='2023-12-31',    # Default end date
+                                                display_format='YYYY-MM-DD',
+                                                className='regularText',
+                                                day_size=30,
+                                                clearable=False
+                                            ),
+                                        ], className='inline-container', style={'marginLeft': '20px'}),
+                                        # Dashboard layout
+                                        dbc.Row([
+                                            # Left column: total sales and growth rate
+                                            dbc.Col([
+                                                html.Div([
+                                                        html.Div("Total Revenue", className='regularText centeredText'),
+                                                        html.Div(id='total-revenue', className='boldText centeredText'),
+                                                ], className='cube'),
 
-                    dbc.Row([
-                        dbc.Col([
-                            dcc.Graph(id='categories-performance-graph')
-                        ], width=10)
-                    ]),
+                                                html.Div([
+                                                    html.Div("Average Growth Rate", className='regularText'),
+                                                    html.Div(id='growth-rate', className='boldText'),
+                                                    html.Div(id='x-over-x', className='lowkeyText'),
+                                                ], className='cube'),
 
-                    dbc.Row([
-                        dcc.Graph(id='long-tail-bubble-graph')
-                    ]),
+                                                html.Div([
+                                                    html.Div("Customers", className='regularText'),
+                                                    html.Div(id='customers', className='boldText'),
+                                                ], className='cube'),
 
-                    html.H2(["Regional insights"], className='centeredText'),
-                    html.Div([
-                        html.Label(["Select Date Range:"], className='regularText'),
-                        dcc.DatePickerRange(
-                            id='date-range-picker-regions',
-                            start_date='2017-01-01',  # Default start date
-                            end_date='2023-12-31',    # Default end date
-                            display_format='YYYY-MM-DD',
-                            className='regularText',
-                            day_size=30,
-                            clearable=False
-                        ),
-                    ],className='inline-container'),
-                    dbc.Row([
-                        dcc.Dropdown(
-                            id='region-selector',
-                            style={
-                                'backgroundColor': '#F0F4FFFF',
+                                                html.Div([
+                                                    html.Div("Orders", className='regularText'),
+                                                    html.Div(id='orders', className='boldText'),
+                                                ], className='cube')
+                                            ], width=2),
+                                            # Right column - a graph
+                                            dbc.Col([
+                                                dcc.Graph(id='sales-graph', style={
+                                                    'margin': 'auto',
+                                                    'padding': '0',
+                                                    'height': '50vh',
+                                                }),
+                                                dbc.Row([
+                                                    dbc.Col([
+                                                        # Graph for Most Selling Weekdays
+                                                        dcc.Graph(id='av-sales-weekday', className='regularText', style={
+                                                            'padding': '0',
+                                                            'width': '70vh',
+                                                            'height': '60vh',
+                                                        })
+                                                    ], width=6),  # Half-width column for first graph
+
+                                                    dbc.Col([
+                                                        # Graph for Most Orders Weekdays
+                                                        dcc.Graph(id='av-orders-weekday', style={
+                                                            'padding': '0',
+                                                            'width': '70vh',
+                                                            'height': '60vh',
+                                                        })
+                                                    ], width=6),
+                                                ]),
+                                                # Create a row for Most Selling Weekdays and Most Orders Weekdays
+                                            ], width=10),
+                                        ], style={'marginLeft': '10px'}),
+                                    ])
+                                ]
+                            ),
+
+                            dcc.Tab(label='Customer insights', style = {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
+                                }, selected_style= {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF', 'color': '#0c315e',
+                                },
+                                children=[
+                                    html.H2(["Customer Insights"], className='centeredText'),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dbc.Row([
+                                                html.Div([
+                                                    html.Label(["Select Date Range:"], className='regularText'),
+                                                    dcc.DatePickerRange(
+                                                        id='date-range-picker-customer',
+                                                        start_date='2017-01-01',  # Default start date
+                                                        end_date='2023-12-31',    # Default end date
+                                                        display_format='YYYY-MM-DD',
+                                                        className='regularText',
+                                                        day_size=30,
+                                                        clearable=False
+                                                    ),
+                                                ]),
+                                            ], style={'marginBottom': '10px'}),
+                                            dbc.Row([
+                                                dcc.Graph(id='customer-segments', style={
+                                                        'padding': '0',
+                                                        'width': '70vh',
+                                                        'height': '70vh',
+                                                })
+                                            ]),
+                                            dbc.Row([
+                                                html.Div([
+                                                    html.Div(["Repeat Customer Rate"], className='regularText centeredText'),
+                                                    html.Div(id='repeat-customer-rate', className='boldText')
+                                                ], className='cube')
+                                            ])
+                                        ], width=4),
+                                        dbc.Col([
+                                            dbc.Row([
+                                                html.Div([
+                                                    'Cohort Triangle'
+                                                ], className='regularText', style={'marginBottom': '5px', 'fontSize': '0.9rem'}),
+                                                html.Div(id='cohort-triangle')
+                                            ]),
+                                            dbc.Row([
+                                                dcc.Graph(id='customer-cohorts', style={
+                                                    'height': '70vh'
+                                                })
+                                            ])
+
+                                        ], width=8),
+
+
+                                        # Horizontal bar plot
+                                        dbc.Col([
+                                            dbc.Row([
+                                                dcc.RadioItems(
+                                                    id='graph-selector',
+                                                    options=[
+                                                        {'label': '     Total Segment Sales', 'value': 'total'},
+                                                        {'label': '     Mean Order Value per Segment', 'value': 'mean'}
+                                                    ],
+                                                    value='total',  # Default value
+                                                    labelStyle={'display': 'inline-block', 'marginLeft': '20px', 'marginBottom': '10px'},
+                                                    className='regularText'
+                                                ),
+                                            ]),
+                                            dbc.Row([
+                                                dcc.Graph(id='segment-sales-graph', style={
+                                                    'height': '30vh'
+                                                })
+                                            ])
+                                        ], width=6)
+                                    ]),
+
+                                    dbc.Row([
+                                        dbc.Col([
+                                            html.Div(className='regularText', style={'marginLeft':'15px'},
+                                                     children=["Top-10 customers based on sales"]),
+                                            html.H4(id='top-customers'),
+                                        ], width=6),
+
+                                        dbc.Col([
+                                            dcc.Graph(id='abc-analysis-customers', style={
+                                                'width': '70vh',
+                                            })
+                                        ], width=6)
+                                    ]),
+                                ]
+                            ),
+
+                            dcc.Tab(label='Product insights', style = {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF', 'color': '#0c315e', 'border': 'none',
+                                }, selected_style= {
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF', 'color': '#0c315e',
+                                },
+                                children=[
+                                    html.H2(["Product insights"], className='centeredText'),
+                                    dbc.Row([
+                                        html.Div([
+                                            html.Label(["Select Date Range:"], className='regularText'),
+                                            dcc.DatePickerRange(
+                                                id='date-range-picker-products',
+                                                start_date='2017-01-01',  # Default start date
+                                                end_date='2023-12-31',    # Default end date
+                                                display_format='YYYY-MM-DD',
+                                                className='regularText',
+                                                day_size=30,
+                                                clearable=False
+                                            ),
+                                        ], className='inline-container'),
+                                        dcc.Graph(id='pareto-graph')
+                                    ]),
+
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dcc.Graph(id='categories-performance-graph')
+                                        ], width=10)
+                                    ], style={'marginTop': '20px'}),
+
+                                    dbc.Row([
+                                        dcc.Graph(id='long-tail-bubble-graph')
+                                    ], style={'marginBottom': '100px'}),
+                                ]
+                            ),
+
+                            dcc.Tab(label='Regional insights', style={
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF',
+                                'color': '#0c315e', 'border': 'none',
+                                }, selected_style={
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF',
                                 'color': '#0c315e',
-                                'width': '150px'
-                            },
-                            options=[{'label': 'West', 'value': 'West'},
-                                     {'label': 'East', 'value': 'East'},
-                                     {'label': 'Central', 'value': 'Central'},
-                                     {'label': 'South', 'value': 'South'},
-                                     {'label': 'All', 'value': 'All'}],
-                            value= 'All',  # Default value
-                            optionHeight=20,
-                            className='regularText',
-                            clearable=False,
-                        ),
-                    ]),
-                    dbc.Row([
-                        dbc.Col([
-                            dcc.Graph(id='map-graph', style={'marginTop': '15px'})
-                        ]),
+                                },
+                                children=[
+                                    html.H2(["Regional insights"], className='centeredText'),
+                                    html.Div([
+                                        html.Label(["Select Date Range:"], className='regularText'),
+                                        dcc.DatePickerRange(
+                                            id='date-range-picker-regions',
+                                            start_date='2017-01-01',  # Default start date
+                                            end_date='2023-12-31',    # Default end date
+                                            display_format='YYYY-MM-DD',
+                                            className='regularText',
+                                            day_size=30,
+                                            clearable=False
+                                        ),
+                                    ],className='inline-container'),
+                                    dbc.Row([
+                                        dcc.Dropdown(
+                                            id='region-selector',
+                                            style={
+                                                'backgroundColor': '#F0F4FFFF',
+                                                'color': '#0c315e',
+                                                'width': '150px',
+                                                'marginLeft': '15px'
+                                            },
+                                            options=[{'label': 'West', 'value': 'West'},
+                                                     {'label': 'East', 'value': 'East'},
+                                                     {'label': 'Central', 'value': 'Central'},
+                                                     {'label': 'South', 'value': 'South'},
+                                                     {'label': 'All', 'value': 'All'}],
+                                            value= 'All',  # Default value
+                                            optionHeight=20,
+                                            className='regularText',
+                                            clearable=False,
+                                        ),
+                                    ]),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dcc.Graph(id='map-graph', style={'marginTop': '15px'})
+                                        ]),
 
-                        dbc.Col([
-                            dbc.Row([
-                                dcc.Graph(id='top-states-graph', style={
-                                    'height': '35vh'
-                                }),
-                            ]),
-                            dbc.Row([
-                                dcc.Graph(id='top-cities-graph', style={
-                                    'height': '35vh'
-                                }),
-                            ], style={'marginTop': '15px'})
-                        ], style={'marginTop': '15px'}),
-                    ]),
-                    dbc.Row([
-                        dcc.Graph(id='regional-sales-graph', style={
-                                    'height': '50vh'
-                        })
-                    ]),
+                                        dbc.Col([
+                                            dbc.Row([
+                                                dcc.Graph(id='top-states-graph', style={
+                                                    'height': '35vh'
+                                                }),
+                                            ]),
+                                            dbc.Row([
+                                                dcc.Graph(id='top-cities-graph', style={
+                                                    'height': '35vh'
+                                                }),
+                                            ], style={'marginTop': '15px'})
+                                        ], style={'marginTop': '15px'}),
+                                    ]),
+                                    dbc.Row([
+                                        dcc.Graph(id='regional-sales-graph', style={
+                                                    'height': '50vh'
+                                        })
+                                    ]),
+                                ]
+                            ),
 
-                    html.H2(['Operational insights'], className='centeredText'),
-                    html.Div([
-                        html.Label(["Select Date Range:"], className='regularText'),
-                        dcc.DatePickerRange(
-                            id='date-range-picker-operations',
-                            start_date='2017-01-01',  # Default start date
-                            end_date='2023-12-31',    # Default end date
-                            display_format='YYYY-MM-DD',
-                            className='regularText',
-                            day_size=30,
-                            clearable=False
-                        ),
-                    ], className='inline-container'),
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Row([
-                                dcc.Graph(id='time-by-mode-boxplot')
-                            ]),
-                            dbc.Row([
-                                dcc.Graph(id='mode-by-segment-barplot')
-                            ]),
-                        ], width=6),
-                        dbc.Col([
-                            dcc.Graph(id='mode-distribution-pie', style={
-                                        'padding': '0',
-                                        'width': '70vh',
-                                        'height': '70vh',
-                                })
-                        ], width=6)
-                    ])
-                ])
-            ], className='regularText centeredText'),
-        ]),
+                            dcc.Tab(label='Operational insights', style={
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#DEE4F3FF',
+                                'color': '#0c315e', 'border': 'none',
+                                }, selected_style={
+                                'line-height': '5vh', 'padding': '0', 'background-color': '#E9F0FFFF',
+                                'color': '#0c315e',
+                                },
+                                children=[
+                                    html.H2(['Operational insights'], className='centeredText'),
+                                    html.Div([
+                                        html.Label(["Select Date Range:"], className='regularText'),
+                                        dcc.DatePickerRange(
+                                            id='date-range-picker-operations',
+                                            start_date='2017-01-01',  # Default start date
+                                            end_date='2023-12-31',    # Default end date
+                                            display_format='YYYY-MM-DD',
+                                            className='regularText',
+                                            day_size=30,
+                                            clearable=False
+                                        ),
+                                    ], className='inline-container'),
+                                    dbc.Row([
+                                        dbc.Col([
+                                            dbc.Row([
+                                                dcc.Graph(id='time-by-mode-boxplot')
+                                            ]),
+                                            dbc.Row([
+                                                dcc.Graph(id='mode-by-segment-barplot')
+                                            ]),
+                                        ], width=6),
+                                        dbc.Col([
+                                            dcc.Graph(id='mode-distribution-pie', style={
+                                                        'padding': '0',
+                                                        'width': '70vh',
+                                                        'height': '70vh',
+                                                })
+                                        ], width=6)
+                                    ])
+                                ]
+                            )
+                        ],
+                    className='regularText centeredText'),
+                ]
+            ),
+        ]
+    )
 ], fluid=True, className='px-0')
 #----------------------------------------------------------------------------------------------------------------------------------
 

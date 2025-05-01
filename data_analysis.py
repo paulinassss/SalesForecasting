@@ -9,7 +9,7 @@ from dash import dash_table
 import warnings
 warnings.filterwarnings('ignore')
 
-custom_colors = ['#A6AEBF', '#C5D3E8', '#D0E8C5', '#A7C5EB', '#9ecbd0', '#cde8e2', '#d7f5e7']
+custom_colors = ['#A6AEBF', '#C5D3E8', '#D0E8C5', '#A7C5EB', '#9ecbd0', '#cde8e2', '#d7f5e7', '#A6AEBF', '#C5D3E8', '#D0E8C5', '#A7C5EB', '#9ecbd0', '#cde8e2', '#d7f5e7', '#A6AEBF', '#C5D3E8', '#D0E8C5', '#A7C5EB', '#9ecbd0', '#cde8e2', '#d7f5e7']
 # def check_integrity(data)
 
 def create_graph(data, start_date, end_date):
@@ -63,19 +63,20 @@ def create_weekday_sales_graph(data, start_date, end_date):
     })
 
     fig_sales = px.bar(weekday_sales, x='Weekday_Name', y='Avg_Sales',
-                       labels={'Weekday_Name': 'Weekday', 'Avg_Sales': 'Average Sales'},
+                       labels={'Weekday_Name': 'Weekday', 'Avg_Sales': 'Average Sales ($)'},
                        color='Weekday_Name',
                        color_discrete_sequence=custom_colors).update_layout(
         paper_bgcolor='rgb(233, 240, 255)',
         plot_bgcolor='rgb(249, 251, 255)',
         margin=dict(l=25, r=25, t=25, b=25),
         font_family='Inconsolata',
-        title=dict(text="Average sales per weekday", font=dict(size=15), automargin=False, yref='paper'),
+        title=dict(text="Average sales per Weekday", font=dict(size=15), automargin=False, yref='paper'),
         bargap=0.4
     ).update_xaxes(
         showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
     ).update_yaxes(
-        showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+        showgrid=True, gridwidth=1, gridcolor='#e9f0ff', nticks=10,
+        dtick=250,
     )
     fig_sales.update_layout(showlegend=False)
     return fig_sales
@@ -188,6 +189,9 @@ def customer_cohorts(data):
         showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
     ).update_yaxes(
         showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+    ).update_traces(
+        textposition='outside',
+        textangle=0
     )
     base = candata.merge(cohorts, how='outer', indicator='join_type', validate='m:1', on= 'Customer_ID')
     base['Year_Quarter'] = base['Year_Quarter'].astype(str)
@@ -244,7 +248,7 @@ def customer_segments(data, start_date, end_date):
         plot_bgcolor='rgb(249, 251, 255)',
         margin=dict(l=20, r=20, t=20, b=20),
         font_family='Inconsolata',
-        title=dict(text="Average number of orders per weekday", font=dict(size=15), automargin=False, yref='paper')
+        title=dict(text="Customer Distribution by Segment", font=dict(size=15), automargin=False, yref='paper')
     )
     return fig
 
@@ -272,7 +276,7 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
             plot_bgcolor='rgb(249, 251, 255)',
             margin=dict(l=20, r=20, t=20, b=20),
             font_family='Inconsolata',
-            title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
+            title=dict(text="Total sales per segment", font=dict(size=15), automargin=False, yref='paper'),
             bargap=0.4,
             showlegend=False
         ).update_xaxes(
@@ -285,8 +289,7 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
            x='Mean_Sales_Per_Order',
            y='Segment',
            orientation='h',
-           title="Mean Order Value by Segment",
-           labels={'Sales': 'Mean order value ($)', 'Segment': 'Segment'},
+           labels={'Mean_Sales_Per_Order': 'Mean order value ($)', 'Segment': 'Segment'},
            color='Segment',
            color_discrete_sequence=custom_colors
         )
@@ -295,11 +298,12 @@ def sales_per_segments(data, start_date, end_date, selected_graph):
             plot_bgcolor='rgb(249, 251, 255)',
             margin=dict(l=20, r=20, t=20, b=20),
             font_family='Inconsolata',
-            title=dict(text="Total and mean sales per segment", font=dict(size=15), automargin=False, yref='paper'),
+            title=dict(text="Mean order value per segment", font=dict(size=15), automargin=False, yref='paper'),
             bargap=0.4,
             showlegend=False
         ).update_xaxes(
-            showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
+            showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+            dtick=50
         ).update_yaxes(
             showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
         )
@@ -314,11 +318,15 @@ def top_clients(data, start_date, end_date):
     top_10_clients = clients.sort_values(by='Sales', ascending=False).head(10)
     top_10_clients.reset_index(drop=True, inplace=True)
     top_10_clients.index += 1
-
+    top_10_clients['Sales'] = top_10_clients['Sales'].apply(lambda x: f"${x:,.2f}")
     table = dash_table.DataTable(
         data=top_10_clients.to_dict('records'),  # Convert DataFrame to dictionary
-        columns=[{'name': col, 'id': col} for col in top_10_clients.columns],  # Columns for the table
-        style_table={'overflow': 'auto', 'margin': 'auto'},
+        columns=[{'name': 'Customer ID', 'id': 'Customer_ID'},
+            {'name': 'Name', 'id': 'Customer_Name'},
+            {'name': 'Segment', 'id': 'Segment'},
+            {'name': 'Sales', 'id': 'Sales'},
+            {'name': 'Orders', 'id': 'Number_of_Orders'}],  # Columns for the table
+        style_table={'overflow': 'auto', 'margin': 'auto', 'marginLeft': '15px'},
         style_header={
             'backgroundColor': '#DEE4F3FF',
             'fontWeight': 'bold',
@@ -409,32 +417,33 @@ def pareto_products(data, start_date, end_date):
     product_sales['%_Contribution'] = (product_sales['Sales'] / product_sales['Sales'].sum()) * 100
     product_sales['Cumulative_%'] = product_sales['%_Contribution'].cumsum()
     top_20_percent_products = product_sales[product_sales['Cumulative_%'] <= 80]
-
+    top_20_percent_products['Short_Product_Name'] = top_20_percent_products['Product_Name'].apply(
+        lambda x: f"{x[:10]}..." if len(x) > 20 else x)
     # Create the Pareto chart using Plotly
     fig = go.Figure()
-
     # Bar chart for the values
     fig.add_trace(go.Bar(
         x=top_20_percent_products['Product_Name'],
         y=top_20_percent_products['Sales'],
         name='Sales',
+        hovertemplate='%{x}: %{y}$<br>' +
+                      'Cumulative Percentage: %{customdata[0]}%',
+        marker=dict(color=custom_colors)
     ))
-
     # Line chart for the cumulative percentage
     fig.add_trace(go.Scatter(
         x=top_20_percent_products['Product_Name'],
         y=top_20_percent_products['Cumulative_%'],
-        name='Cumulative Percentage',
+        name='Cumulative Percentage ($)',
         mode='lines+markers',
         yaxis='y2'
     ))
-
     # Update layout
     fig.update_layout(
-        xaxis_title="Category",
-        yaxis_title="Value",
+        xaxis_title="Product name",
+        yaxis_title="Generated income ($)",
         yaxis2=dict(
-            title="Cumulative Percentage",
+            title="Cumulative Percentage (%)",
             overlaying='y',
             side='right',
             #tickformat="%"
@@ -447,6 +456,10 @@ def pareto_products(data, start_date, end_date):
         title=dict(text="Pareto Analysis", font=dict(size=15), automargin=False, yref='paper'),
         bargap=0.4
     ).update_xaxes(
+            tickangle=45,
+            tickmode='array',
+            tickvals=top_20_percent_products['Product_Name'],
+            ticktext=top_20_percent_products['Short_Product_Name'],
             showgrid=True, gridwidth=1, gridcolor='#e9f0ff'
         ).update_yaxes(
             showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
@@ -515,7 +528,7 @@ def category_perfomance(data, start_date, end_date):
     fig.update_layout(
         xaxis_title="Sales",
         yaxis_title="Categories and Subcategories",
-        xaxis=dict(tickformat='$,.2f'),  # Format x-axis as currency
+        xaxis=dict(tickformat='$,.2f', range=[0, 950000]),  # Format x-axis as currency
         showlegend=False,
         paper_bgcolor='rgba(222, 228, 243, 0)',
         plot_bgcolor='rgb(249, 251, 255)',
@@ -584,7 +597,9 @@ def long_tail_analysis(data, start_date, end_date):
             showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
         ).update_yaxes(
             showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
-        )
+        ).update_xaxes(
+            dtick=1,
+    )
 
     return fig
 
@@ -616,6 +631,8 @@ def top_states_and_cities(data, start_date, end_date, selected_region):
                                     showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
                                 ).update_yaxes(
                                     showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                ).update_xaxes(
+                                    dtick=50000
                                 )
     # Create Bar Chart for Top 5 Cities by Sales
     fig_cities = px.bar(top_cities, y='City', x='Sales',
@@ -633,6 +650,8 @@ def top_states_and_cities(data, start_date, end_date, selected_region):
                                     showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
                                 ).update_yaxes(
                                     showgrid=True, gridwidth=1, gridcolor='#e9f0ff',
+                                ).update_xaxes(
+                                   dtick=50000
                                 )
     return fig_states, fig_cities
 
